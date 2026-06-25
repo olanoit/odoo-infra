@@ -75,6 +75,7 @@ odoo-multi-version/
 │   ├── setup-ssl.sh                ← emite SSL inicial vía Certbot
 │   ├── nginx-dedupe.sh             ← limpia bloques duplicados en confs de nginx
 │   ├── backup-cron.sh             ← backup-all + retención, para cron
+│   ├── clean-logs.sh              ← vacía los logs Docker de uno o todos los proyectos
 │   └── odoo-entrypoint.sh          ← instala requirements.txt de shared-addons al startup
 │
 └── docs/                           ← guías paso a paso
@@ -150,6 +151,7 @@ odoo-multi-version/
 | `scripts/nginx-dedupe.sh`    | Limpia bloques duplicados en `00-upstreams.conf` y `vhosts-projects.conf` (típico tras varias corridas de `sync-projects.sh` en escenarios de reset).    |
 | `scripts/odoo-entrypoint.sh` | Wrapper de arranque del container Odoo: instala `requirements.txt` de módulos en `shared-addons/` antes de pasarle el control al entrypoint oficial.    |
 | `scripts/backup-cron.sh`     | Backup automático no interactivo (`backup-all`) + retención configurable (`RETENTION_DAYS`). Pensado para `cron`. Ver [docs/05-backups.md](docs/05-backups.md).    |
+| `scripts/clean-logs.sh`      | Vacía los logs Docker de un proyecto (`<contenedor>`) o de todos (`--all`). Trunca sin reiniciar el contenedor. Soporta `--infra`, `--dry-run`, `--yes`.            |
 
 ### Documentación
 

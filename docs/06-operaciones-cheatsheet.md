@@ -88,6 +88,23 @@ docker logs odoo_postgres 2>&1 | tail -50
 docker compose logs -f --tail=20
 ```
 
+### Limpiar (vaciar) los logs
+
+```bash
+# Ver cuánto ocupan los logs sin borrar nada
+./scripts/clean-logs.sh --all --dry-run
+
+# Vaciar el log de un proyecto
+./scripts/clean-logs.sh odoo18_farmaniacos_sta
+
+# Vaciar los logs de TODOS los proyectos (y la infra con --infra)
+./scripts/clean-logs.sh --all
+./scripts/clean-logs.sh --all --infra --yes
+```
+
+> Trunca el archivo `json-file` del contenedor (no lo reinicia). Usa `sudo`
+> porque el log vive bajo `/var/lib/docker`.
+
 ---
 
 ## Actualizar módulos (ver guía completa en doc 04)
