@@ -1,25 +1,28 @@
-# OLANOIT — Odoo Multi-Version Orchestration (Staging)
+# OLANOIT — Odoo Multi-Version Orchestration
 
-**Esta versión del orquestador está dedicada exclusivamente a entornos de _staging_.**
-Todos los contenedores, bases de datos y dominios usan el sufijo `_sta`. No se
-despliegan instancias `dev` ni `prod` desde este repo.
+Orquestador multi-versión de Odoo (17/18/19) sobre Docker: PostgreSQL + Nginx +
+Certbot, con un contenedor Odoo por proyecto y entorno.
 
-| Convención    | Formato                            | Ejemplo                          |
-|---------------|------------------------------------|----------------------------------|
-| Contenedor    | `odoo{VERSION}_{PROYECTO}_sta`     | `odoo19_farmaniacos_sta`          |
-| Base de datos | `{proyecto}_sta_*`                 | `farmaniacos_sta_principal`       |
-| Subdominio    | `{proyecto}-sta.<dominio>`         | `farmaniacos-sta.OLANOIT.work`  |
-| Puertos host  | `{ver}010..{ver}099` (HTTP) + 1 LP | `19020/19021`                    |
+**Sin proyectos por defecto.** El repo viene limpio: vos decidís qué desplegar.
+Agregá tus proyectos en `projects-registry.conf` y ejecutá
+`./scripts/sync-projects.sh --apply`. Los ejemplos de esta documentación usan
+`farmaniacos` (Odoo 18) **solo como ilustración**.
+
+| Convención    | Formato                              | Ejemplo                         |
+|---------------|--------------------------------------|---------------------------------|
+| Contenedor    | `odoo{VERSION}_{PROYECTO}_{ENTORNO}` | `odoo18_farmaniacos_sta`        |
+| Base de datos | `{proyecto}_{entorno}_*`             | `farmaniacos_sta_principal`     |
+| Subdominio    | `{proyecto}-{entorno}.<dominio>`     | `farmaniacos-sta.altalatam.com` |
+| Puertos host  | `{ver}010..{ver}099` (HTTP) + 1 LP   | `18020/18021`                   |
 
 ---
 
 ## Contenedores activos
 
-| Contenedor              | Versión | Proyecto    | Subdominio                       | HTTP  | LP    |
-|-------------------------|---------|-------------|----------------------------------|-------|-------|
-| `odoo19_farmaniacos_sta` | 19      | farmaniacos  | farmaniacos-sta.OLANOIT.work    | 19020 | 19021 |
+**Ninguno por defecto.** El repo no trae proyectos preconfigurados. A medida que
+registres y despliegues proyectos, sus contenedores aparecerán aquí.
 
-Para añadir otro proyecto de staging, ver
+Para agregar tu primer proyecto, ver
 [02-agregar-proyecto-dominio.md](docs/02-agregar-proyecto-dominio.md).
 
 ---
@@ -172,12 +175,17 @@ sudo usermod -aG docker $USER && newgrp docker
 
 # 2. Configurar variables (POSTGRES_PASSWORD y ODOO_MASTER_PASSWD son obligatorias)
 cp .env.example .env && nano .env
+chmod +x scripts/*.sh
 
-# 3. Emitir SSL (DNS debe apuntar al servidor primero)
-chmod +x scripts/*.sh && ./scripts/setup-ssl.sh
+# 3. Registrar tu primer proyecto (formato proyecto:version:entorno:dominio:puerto)
+nano projects-registry.conf
+#   ej: farmaniacos:18:sta:farmaniacos-sta.altalatam.com:18020
 
-# 5. Levantar todo
-./scripts/ops.sh start
+# 4. Aplicar: genera el servicio, nginx y odoo.conf, y levanta el contenedor
+./scripts/sync-projects.sh --apply --start
+
+# 5. Emitir SSL (cuando el DNS del dominio ya apunte a este servidor)
+./scripts/sync-projects.sh --ssl
 
 # 6. Estado
 ./scripts/ops.sh health
@@ -189,20 +197,20 @@ chmod +x scripts/*.sh && ./scripts/setup-ssl.sh
 
 ```bash
 ./scripts/ops.sh health
-./scripts/ops.sh logs odoo19_farmaniacos_sta 200
-./scripts/ops.sh restart odoo19_farmaniacos_sta
+./scripts/ops.sh logs odoo18_farmaniacos_sta 200
+./scripts/ops.sh restart odoo18_farmaniacos_sta
 
 # Actualizar un módulo en una DB de staging
-./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
+./scripts/ops.sh module odoo18_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
 
 # Backup (DB + filestore → ./backups/farmaniacos/)
-./scripts/ops.sh backup farmaniacos odoo19_farmaniacos_sta farmaniacos_sta_principal
+./scripts/ops.sh backup farmaniacos odoo18_farmaniacos_sta farmaniacos_sta_principal
 
 # Listar backups disponibles
 ./scripts/ops.sh list-backups farmaniacos
 
 # Restaurar (auto-detecta filestore por timestamp)
-./scripts/ops.sh restore odoo19_farmaniacos_sta farmaniacos_sta_copia \
+./scripts/ops.sh restore odoo18_farmaniacos_sta farmaniacos_sta_copia \
   farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
 
 # Restaurar un backup que viene de otro servidor (.tar.gz / .zip / .sql.gz)

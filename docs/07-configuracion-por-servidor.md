@@ -74,7 +74,7 @@ nano /opt/odoo-infra/docker-compose.override.yml
 # Personalización de este servidor — NO commitear al repositorio
 services:
 
-  odoo19_farmaniacos_sta:
+  odoo18_farmaniacos_sta:
     command:
       - odoo
       - --config=/etc/odoo/odoo.conf
@@ -285,14 +285,14 @@ Según lo que necesita el proyecto, seleccionar los subdirectorios:
 # Después de crear o editar docker-compose.override.yml:
 
 # Aplicar a un solo contenedor (sin tocar los demás)
-docker compose up -d --force-recreate odoo19_farmaniacos_sta
+docker compose up -d --force-recreate odoo18_farmaniacos_sta
 
 # Verificar que el comando activo incluye los parámetros esperados
-docker inspect odoo19_farmaniacos_sta \
+docker inspect odoo18_farmaniacos_sta \
   --format '{{range .Args}}{{.}} {{end}}' | tr ' ' '\n'
 
 # Verificar addons_path activo dentro del contenedor
-docker exec odoo19_farmaniacos_sta python3 -c \
+docker exec odoo18_farmaniacos_sta python3 -c \
   "import odoo.tools; print(odoo.tools.config['addons_path'])"
 ```
 
@@ -323,7 +323,7 @@ docker inspect odoo19_nuevoproyecto_sta --format '{{range .Args}}{{.}} {{end}}'
 
 ```bash
 # Ver la configuración efectiva que usa Odoo (fusión de config + CLI)
-docker exec odoo19_farmaniacos_sta python3 -c "
+docker exec odoo18_farmaniacos_sta python3 -c "
 import odoo.tools
 config = odoo.tools.config
 print(f'workers:        {config[\"workers\"]}')

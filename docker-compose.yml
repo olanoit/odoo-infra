@@ -96,53 +96,10 @@ services:
       done"
 
   # ---------------------------------------------------------------------------
-
+  # Los servicios Odoo se insertan acá automáticamente por sync-projects.sh.
+  # No hay ningún proyecto por defecto: agregá los tuyos en projects-registry.conf
+  # y ejecutá ./scripts/sync-projects.sh --apply (o usá la PLANTILLA de abajo).
   # ---------------------------------------------------------------------------
-  # ODOO 19 | FARMANIACOS | STA
-  # Contenedor : odoo19_farmaniacos_sta
-  # Subdominio : farmaniacos-sta.OLANOIT.work
-  # DB prefix  : farmaniacos_sta_
-  # ---------------------------------------------------------------------------
-  odoo19_farmaniacos_sta:
-    image: odoo:19.0
-    container_name: odoo19_farmaniacos_sta
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      HOST: db
-      PORT: 5432
-      USER: ${POSTGRES_USER:-odoo}
-      PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - odoo19_farmaniacos_sta_data:/var/lib/odoo
-      - ./projects/farmaniacos/odoo19/sta/config/odoo.conf:/etc/odoo/odoo.conf:ro
-      - ./projects/farmaniacos/odoo19/sta/addons:/mnt/extra-addons
-      - ./shared-addons/19:/mnt/shared-addons:ro
-      - ./enterprise/odoo19:/mnt/enterprise:ro
-      # Volumen central de backups (filestore tarballs). Compartido con postgres.
-      - ./backups:/backups
-    ports:
-      - "127.0.0.1:19020:8069"
-      - "127.0.0.1:19021:8072"
-    networks:
-      - odoo_net
-    # admin_passwd (master password de Odoo) se inyecta desde .env, nunca se versiona.
-    command: ["odoo", "--config=/etc/odoo/odoo.conf", "--admin-passwd=${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}"]
-    # Límites de recursos: una instancia no puede agotar la RAM/CPU del host.
-    mem_limit: 3g
-    cpus: 2.0
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8069/web/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options: { max-size: "100m", max-file: "5" }
-
 
   # __SYNC_SERVICES_INSERT__
 
@@ -185,10 +142,6 @@ services:
 volumes:
   postgres_data:
     name: odoo_postgres_data
-
-  odoo19_farmaniacos_sta_data:
-    name: odoo19_farmaniacos_sta_data
-
 
   # __SYNC_VOLUMES_INSERT__
 

@@ -205,10 +205,10 @@ projects/
 ### Agregar un módulo de proyecto
 
 ```bash
-cd /opt/odoo-infra/projects/farmaniacos/odoo19/sta/addons/
+cd /opt/odoo-infra/projects/farmaniacos/odoo18/sta/addons/
 
 # Opción A: clonar directamente
-git clone https://github.com/OLANOIT/mi_modulo_cliente.git
+git clone https://github.com/olanoit/mi_modulo_cliente.git
 
 # Opción B: copiar desde otra ubicación
 cp -r ~/desarrollo/mi_modulo_cliente .
@@ -241,7 +241,7 @@ nano /opt/odoo-infra/docker-compose.override.yml
 ```yaml
 # docker-compose.override.yml — específico del servidor, NO al repositorio
 services:
-  odoo19_farmaniacos_sta:
+  odoo18_farmaniacos_sta:
     command: >
       odoo --config=/etc/odoo/odoo.conf
       --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/OLANOIT_extra_addons/tools,/mnt/extra-addons
@@ -263,7 +263,7 @@ El `--addons-path` en CLI sobreescribe el del `odoo.conf`, así `git pull` funci
 Aplicar después de crear o modificar el override:
 
 ```bash
-docker compose up -d --force-recreate odoo19_farmaniacos_sta
+docker compose up -d --force-recreate odoo18_farmaniacos_sta
 ```
 
 ---
@@ -272,12 +272,12 @@ docker compose up -d --force-recreate odoo19_farmaniacos_sta
 
 ```bash
 # Listar módulos en cada path
-docker exec odoo19_farmaniacos_sta ls /mnt/extra-addons/
-docker exec odoo19_farmaniacos_sta ls /mnt/shared-addons/
-docker exec odoo19_farmaniacos_sta ls /mnt/enterprise/
+docker exec odoo18_farmaniacos_sta ls /mnt/extra-addons/
+docker exec odoo18_farmaniacos_sta ls /mnt/shared-addons/
+docker exec odoo18_farmaniacos_sta ls /mnt/enterprise/
 
 # Verificar que odoo reconoce el módulo
-docker exec odoo19_farmaniacos_sta python3 -c "
+docker exec odoo18_farmaniacos_sta python3 -c "
 import odoo
 odoo.tools.config['addons_path'] = '/mnt/enterprise,/mnt/shared-addons,/mnt/extra-addons'
 from odoo.modules.module import get_modules
@@ -299,10 +299,10 @@ print([m for m in get_modules() if 'mi_modulo' in m])
 
 ```bash
 # Instalar
-./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal mi_modulo install
+./scripts/ops.sh module odoo18_farmaniacos_sta farmaniacos_sta_principal mi_modulo install
 
 # Actualizar
-./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
+./scripts/ops.sh module odoo18_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
 ```
 
 Ver la guía completa de actualización en **[04-actualizar-modulo.md](04-actualizar-modulo.md)**.

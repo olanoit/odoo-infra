@@ -48,7 +48,7 @@ Ejemplo real con un proyecto:
 ./scripts/ops.sh backup <proyecto> <contenedor> <base_de_datos>
 
 # Ejemplo — staging principal de farmaniacos:
-./scripts/ops.sh backup farmaniacos odoo19_farmaniacos_sta farmaniacos_sta_principal
+./scripts/ops.sh backup farmaniacos odoo18_farmaniacos_sta farmaniacos_sta_principal
 ```
 
 Esto genera dos archivos con el **mismo timestamp** en `./backups/farmaniacos/`:
@@ -110,20 +110,20 @@ ls -lh ./backups/farmaniacos/filestore/
 ```bash
 # A) Restauración típica — auto-detecta el filestore por timestamp
 ./scripts/ops.sh restore \
-  odoo19_farmaniacos_sta \
+  odoo18_farmaniacos_sta \
   farmaniacos_sta_copia \
   farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
 
 # B) Especificando ambos archivos manualmente
 ./scripts/ops.sh restore \
-  odoo19_farmaniacos_sta \
+  odoo18_farmaniacos_sta \
   farmaniacos_sta_qa \
   farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz \
   farmaniacos/filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz
 
 # C) Sobrescribir una DB existente (eliminarla primero)
 docker exec odoo_postgres dropdb -U odoo farmaniacos_sta_copia
-./scripts/ops.sh restore odoo19_farmaniacos_sta farmaniacos_sta_copia \
+./scripts/ops.sh restore odoo18_farmaniacos_sta farmaniacos_sta_copia \
   farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
 ```
 
@@ -268,7 +268,7 @@ Qué hace cada corrida:
 Si preferís respaldar un proyecto puntual en vez de todos:
 
 ```cron
-0 2 * * * /opt/odoo-infra/scripts/ops.sh backup farmaniacos odoo19_farmaniacos_sta farmaniacos_sta_principal >> /var/log/odoo-backups.log 2>&1
+0 2 * * * /opt/odoo-infra/scripts/ops.sh backup farmaniacos odoo18_farmaniacos_sta farmaniacos_sta_principal >> /var/log/odoo-backups.log 2>&1
 ```
 
 Para más proyectos, replicá la línea cambiando `<proyecto>`, contenedor y nombre de DB.
@@ -287,7 +287,7 @@ Solo para emergencias o cuando la terminal no esté disponible:
 > Con `list_db=False` y el bloqueo de `/web/database` en Nginx, el manager web
 > **no** es accesible desde internet en los entornos generados por los scripts.
 > Para usarlo, hacelo desde la red interna del servidor o mediante un túnel SSH
-> (`ssh -L 8069:127.0.0.1:19020 usuario@servidor`). El terminal sigue siendo la
+> (`ssh -L 8069:127.0.0.1:18020 usuario@servidor`). El terminal sigue siendo la
 > vía preferida.
 
 > El terminal es preferible: backup atómico, comprimido, controlado por cron y sin
