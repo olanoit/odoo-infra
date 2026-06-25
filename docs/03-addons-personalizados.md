@@ -44,10 +44,10 @@ shared-addons/
 │   └── meli_oerp/
 ├── 18/                     ← shared-addons para Odoo 18
 │   ├── al_l10n_pe_edi/     ← rama 18.0 del mismo módulo
-│   ├── extendrix_extra_addons/
+│   ├── OLANOIT_extra_addons/
 │   └── mercadolibre/
 └── 19/                     ← shared-addons para Odoo 19
-    ├── extendrix_extra_addons/
+    ├── OLANOIT_extra_addons/
     └── mercadolibre/
 ```
 
@@ -60,7 +60,7 @@ shared-addons/
 cd /opt/odoo-infra/shared-addons/18      # o /19, /17 — según la versión
 
 # Clonar el módulo en la rama correspondiente a la versión de Odoo
-git clone -b 18.0 https://github.com/extendrix/al_l10n_pe_edi.git
+git clone -b 18.0 https://github.com/OLANOIT/al_l10n_pe_edi.git
 
 # El módulo ya está disponible en todos los contenedores Odoo 18 (sin reiniciar)
 # Actualizar lista de aplicaciones en Odoo:
@@ -73,8 +73,8 @@ Si el módulo es compatible con varias versiones, copialo (o symlink):
 
 ```bash
 # Opción A: clonar cada rama en su versión
-git clone -b 18.0 https://github.com/extendrix/al_l10n_pe_edi.git shared-addons/18/al_l10n_pe_edi
-git clone -b 19.0 https://github.com/extendrix/al_l10n_pe_edi.git shared-addons/19/al_l10n_pe_edi
+git clone -b 18.0 https://github.com/OLANOIT/al_l10n_pe_edi.git shared-addons/18/al_l10n_pe_edi
+git clone -b 19.0 https://github.com/OLANOIT/al_l10n_pe_edi.git shared-addons/19/al_l10n_pe_edi
 
 # Opción B: módulo idéntico para varias versiones — symlink relativo
 cd shared-addons/19
@@ -194,21 +194,21 @@ Para módulos específicos de un cliente que **no se comparten** con otros proye
 
 ```
 projects/
-└── motomarket/
+└── farmaniacos/
     └── odoo19/
         └── sta/
             └── addons/
-                ├── extendrix_field_service_motomarket/
-                └── motomarket_customizations/
+                ├── account/
+                └── farmaniacos_customizations/
 ```
 
 ### Agregar un módulo de proyecto
 
 ```bash
-cd /opt/odoo-infra/projects/motomarket/odoo19/sta/addons/
+cd /opt/odoo-infra/projects/farmaniacos/odoo19/sta/addons/
 
 # Opción A: clonar directamente
-git clone https://github.com/extendrix/mi_modulo_cliente.git
+git clone https://github.com/OLANOIT/mi_modulo_cliente.git
 
 # Opción B: copiar desde otra ubicación
 cp -r ~/desarrollo/mi_modulo_cliente .
@@ -222,12 +222,12 @@ Si `shared-addons` tiene la estructura:
 
 ```
 shared-addons/
-└── extendrix_extra_addons/
+└── OLANOIT_extra_addons/
     ├── account/               ← módulos de facturación (México, Perú, Chile)
-    │   ├── extendrix_l10n_mx_qr/
-    │   └── l10n_mx_edi_extendrix_complemento/
+    │   ├── OLANOIT_l10n_mx_qr/
+    │   └── l10n_mx_edi_OLANOIT_complemento/
     └── tools/                 ← utilidades generales
-        └── extendrix_licencia_perpetua/
+        └── OLANOIT_licencia_perpetua/
 ```
 
 Cada proyecto necesita solo ciertos subdirectorios. Como `odoo.conf` está en git y no debe
@@ -241,20 +241,20 @@ nano /opt/odoo-infra/docker-compose.override.yml
 ```yaml
 # docker-compose.override.yml — específico del servidor, NO al repositorio
 services:
-  odoo19_motomarket_sta:
+  odoo19_farmaniacos_sta:
     command: >
       odoo --config=/etc/odoo/odoo.conf
-      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/extendrix_extra_addons/tools,/mnt/extra-addons
+      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/OLANOIT_extra_addons/tools,/mnt/extra-addons
 
   odoo19_micliente_mexico_sta:
     command: >
       odoo --config=/etc/odoo/odoo.conf
-      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/extendrix_extra_addons/account,/mnt/extra-addons
+      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/OLANOIT_extra_addons/account,/mnt/extra-addons
 
   odoo19_otroproyecto_sta:
     command: >
       odoo --config=/etc/odoo/odoo.conf
-      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/extendrix_extra_addons/account,/mnt/shared-addons/extendrix_extra_addons/tools,/mnt/extra-addons
+      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/OLANOIT_extra_addons/account,/mnt/shared-addons/OLANOIT_extra_addons/tools,/mnt/extra-addons
 ```
 
 Docker Compose fusiona automáticamente `docker-compose.override.yml` con `docker-compose.yml`.
@@ -263,7 +263,7 @@ El `--addons-path` en CLI sobreescribe el del `odoo.conf`, así `git pull` funci
 Aplicar después de crear o modificar el override:
 
 ```bash
-docker compose up -d --force-recreate odoo19_motomarket_sta
+docker compose up -d --force-recreate odoo19_farmaniacos_sta
 ```
 
 ---
@@ -272,12 +272,12 @@ docker compose up -d --force-recreate odoo19_motomarket_sta
 
 ```bash
 # Listar módulos en cada path
-docker exec odoo19_motomarket_sta ls /mnt/extra-addons/
-docker exec odoo19_motomarket_sta ls /mnt/shared-addons/
-docker exec odoo19_motomarket_sta ls /mnt/enterprise/
+docker exec odoo19_farmaniacos_sta ls /mnt/extra-addons/
+docker exec odoo19_farmaniacos_sta ls /mnt/shared-addons/
+docker exec odoo19_farmaniacos_sta ls /mnt/enterprise/
 
 # Verificar que odoo reconoce el módulo
-docker exec odoo19_motomarket_sta python3 -c "
+docker exec odoo19_farmaniacos_sta python3 -c "
 import odoo
 odoo.tools.config['addons_path'] = '/mnt/enterprise,/mnt/shared-addons,/mnt/extra-addons'
 from odoo.modules.module import get_modules
@@ -299,10 +299,10 @@ print([m for m in get_modules() if 'mi_modulo' in m])
 
 ```bash
 # Instalar
-./scripts/ops.sh module odoo19_motomarket_sta motomarket_sta_principal mi_modulo install
+./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal mi_modulo install
 
 # Actualizar
-./scripts/ops.sh module odoo19_motomarket_sta motomarket_sta_principal mi_modulo update
+./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
 ```
 
 Ver la guía completa de actualización en **[04-actualizar-modulo.md](04-actualizar-modulo.md)**.

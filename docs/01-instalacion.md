@@ -34,7 +34,7 @@ docker compose version      # debe ser >= 2.x
 ## Paso 2 — Clonar el proyecto al servidor
 
 ```bash
-git clone https://github.com/Extendrix-Ecommmerce-Services/odoo-multi-version.git /opt/odoo-infra
+git clone https://github.com/OLANOIT-Ecommmerce-Services/odoo-multi-version.git /opt/odoo-infra
 cd /opt/odoo-infra
 
 chmod +x scripts/*.sh
@@ -53,11 +53,23 @@ Contenido mínimo requerido en `.env`:
 
 ```dotenv
 POSTGRES_PASSWORD=TuContraseñaSegura2024!
+ODOO_MASTER_PASSWD=OtraClaveFuerteDistinta2024!
 CERTBOT_EMAIL=admin@tudominio.com
 
 # Una variable DOMAIN_ por cada instancia
 DOMAIN_MICLIENTE_STA=micliente-sta.tudominio.com
 ```
+
+> **`ODOO_MASTER_PASSWD` es obligatoria.** Es la *master password* de Odoo
+> (gestor de bases de datos: crear/borrar/backup/restaurar). Se inyecta en cada
+> instancia por línea de comandos (`--admin-passwd`) y **nunca** se escribe en
+> los `odoo.conf` versionados. Si no está definida, los contenedores Odoo **no
+> arrancan** (falla con `required variable ODOO_MASTER_PASSWD is missing`).
+> Genera valores fuertes y **distintos** para cada variable:
+>
+> ```bash
+> openssl rand -base64 30 | tr -d '=+/' | cut -c1-30   # uno por cada password
+> ```
 
 ---
 
@@ -134,7 +146,7 @@ services:
       --workers=4
       --limit-memory-soft=2147483648
       --limit-memory-hard=2684354560
-      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/extendrix_extra_addons/tools,/mnt/extra-addons
+      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/OLANOIT_extra_addons/tools,/mnt/extra-addons
 ```
 
 Ver perfiles de recursos y guía completa en [07-configuracion-por-servidor.md](07-configuracion-por-servidor.md).
@@ -170,7 +182,7 @@ Acceder en el navegador a cada dominio registrado. Verás el selector de base de
 1. Ir a `https://<tu-dominio>/web/database/manager`
 2. Clic en **"Create Database"**
 3. Usar el nombre con el prefijo del entorno (ej: `micliente_sta_principal`)
-4. Ingresar la Master Password definida en `odoo.conf` (`admin_passwd`)
+4. Ingresar la Master Password definida en `.env` (`ODOO_MASTER_PASSWD`)
 5. Elegir país, idioma y demo data (desactivar en staging/producción)
 
 ---

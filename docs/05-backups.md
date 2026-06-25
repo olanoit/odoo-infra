@@ -32,11 +32,11 @@ intermedios al host.
 Ejemplo real con un proyecto:
 
 ```
-./backups/motomarket/
+./backups/farmaniacos/
 ├── db/
-│   └── 20260511_020000_motomarket_sta_principal.sql.gz
+│   └── 20260511_020000_farmaniacos_sta_principal.sql.gz
 └── filestore/
-    └── 20260511_020000_motomarket_sta_principal_filestore.tar.gz
+    └── 20260511_020000_farmaniacos_sta_principal_filestore.tar.gz
 ```
 
 ---
@@ -47,14 +47,14 @@ Ejemplo real con un proyecto:
 # SINTAXIS:
 ./scripts/ops.sh backup <proyecto> <contenedor> <base_de_datos>
 
-# Ejemplo — staging principal de motomarket:
-./scripts/ops.sh backup motomarket odoo19_motomarket_sta motomarket_sta_principal
+# Ejemplo — staging principal de farmaniacos:
+./scripts/ops.sh backup farmaniacos odoo19_farmaniacos_sta farmaniacos_sta_principal
 ```
 
-Esto genera dos archivos con el **mismo timestamp** en `./backups/motomarket/`:
+Esto genera dos archivos con el **mismo timestamp** en `./backups/farmaniacos/`:
 
-- `db/20260511_020000_motomarket_sta_principal.sql.gz` (pg_dump comprimido)
-- `filestore/20260511_020000_motomarket_sta_principal_filestore.tar.gz`
+- `db/20260511_020000_farmaniacos_sta_principal.sql.gz` (pg_dump comprimido)
+- `filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz`
 
 Si la DB todavía no tiene adjuntos, el filestore se omite con un warning (es normal
 en bases recién creadas).
@@ -78,14 +78,14 @@ cada una en el volumen central.
 ./scripts/ops.sh list-backups
 
 # Solo un proyecto
-./scripts/ops.sh list-backups motomarket
+./scripts/ops.sh list-backups farmaniacos
 ```
 
 Equivalente manual:
 
 ```bash
-ls -lh ./backups/motomarket/db/
-ls -lh ./backups/motomarket/filestore/
+ls -lh ./backups/farmaniacos/db/
+ls -lh ./backups/farmaniacos/filestore/
 ```
 
 ---
@@ -110,21 +110,21 @@ ls -lh ./backups/motomarket/filestore/
 ```bash
 # A) Restauración típica — auto-detecta el filestore por timestamp
 ./scripts/ops.sh restore \
-  odoo19_motomarket_sta \
-  motomarket_sta_copia \
-  motomarket/db/20260511_020000_motomarket_sta_principal.sql.gz
+  odoo19_farmaniacos_sta \
+  farmaniacos_sta_copia \
+  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
 
 # B) Especificando ambos archivos manualmente
 ./scripts/ops.sh restore \
-  odoo19_motomarket_sta \
-  motomarket_sta_qa \
-  motomarket/db/20260511_020000_motomarket_sta_principal.sql.gz \
-  motomarket/filestore/20260511_020000_motomarket_sta_principal_filestore.tar.gz
+  odoo19_farmaniacos_sta \
+  farmaniacos_sta_qa \
+  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz \
+  farmaniacos/filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz
 
 # C) Sobrescribir una DB existente (eliminarla primero)
-docker exec odoo_postgres dropdb -U odoo motomarket_sta_copia
-./scripts/ops.sh restore odoo19_motomarket_sta motomarket_sta_copia \
-  motomarket/db/20260511_020000_motomarket_sta_principal.sql.gz
+docker exec odoo_postgres dropdb -U odoo farmaniacos_sta_copia
+./scripts/ops.sh restore odoo19_farmaniacos_sta farmaniacos_sta_copia \
+  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
 ```
 
 ### Qué hace internamente el `restore`
@@ -135,8 +135,8 @@ docker exec odoo_postgres dropdb -U odoo motomarket_sta_copia
    carpeta de la DB destino: `/var/lib/odoo/filestore/<db_destino>/`.
 4. Reinicia el contenedor Odoo para que detecte la nueva DB.
 
-> El renombrado del filestore es lo que permite restaurar `motomarket_sta_principal`
-> como `motomarket_sta_copia` sin que Odoo pierda los adjuntos.
+> El renombrado del filestore es lo que permite restaurar `farmaniacos_sta_principal`
+> como `farmaniacos_sta_copia` sin que Odoo pierda los adjuntos.
 
 ---
 
@@ -237,21 +237,41 @@ Desactiva en SQL directo:
 
 ## Automatizar backups con cron
 
+La forma recomendada es el script **`backup-cron.sh`**, que respalda **todas** las
+bases (`backup-all`), aplica retención y deja un log por corrida — sin tener que
+listar cada proyecto a mano:
+
 ```bash
 crontab -e
 ```
 
 ```cron
-# ─── Backups nocturnos de staging ──────────────────────────────────────────
-# 02:00 — motomarket staging
-0 2 * * * /opt/odoo-infra/scripts/ops.sh backup motomarket odoo19_motomarket_sta motomarket_sta_principal >> /var/log/odoo-backups.log 2>&1
-
-# ─── Limpieza semanal — mantener solo los últimos 14 días ─────────────────
-0 4 * * 0 find /opt/odoo-infra/backups/*/db/        -name "*.sql.gz" -mtime +14 -delete >> /var/log/odoo-backups.log 2>&1
-0 4 * * 0 find /opt/odoo-infra/backups/*/filestore/ -name "*.tar.gz" -mtime +14 -delete >> /var/log/odoo-backups.log 2>&1
+# ─── Backup nocturno de TODAS las bases + retención ────────────────────────
+# 02:30 todos los días. RETENTION_DAYS controla cuántos días se conservan.
+30 2 * * *  RETENTION_DAYS=14 /opt/odoo-infra/scripts/backup-cron.sh >/dev/null 2>&1
 ```
 
-Para más proyectos, replicá la primera línea cambiando `<proyecto>`, contenedor y nombre de DB.
+Qué hace cada corrida:
+
+1. `ops.sh backup-all` → DB dump + filestore de cada base en `./backups/<proyecto>/`.
+2. Borra los `.sql.gz` y `*_filestore.tar.gz` con más de `RETENTION_DAYS` días
+   (default 14; `RETENTION_DAYS=0` desactiva el borrado).
+3. Escribe un log en `./backups/_cron/backup-<fecha>.log` (estos logs se purgan
+   a los 60 días automáticamente).
+
+> **Importante:** un backup en el mismo disco **no** protege ante un fallo de
+> ese disco. Encadená una copia a almacenamiento externo (ver
+> *Transferir backup fuera del servidor* más abajo) después del backup nocturno.
+
+### Alternativa: backup de un solo proyecto
+
+Si preferís respaldar un proyecto puntual en vez de todos:
+
+```cron
+0 2 * * * /opt/odoo-infra/scripts/ops.sh backup farmaniacos odoo19_farmaniacos_sta farmaniacos_sta_principal >> /var/log/odoo-backups.log 2>&1
+```
+
+Para más proyectos, replicá la línea cambiando `<proyecto>`, contenedor y nombre de DB.
 
 ---
 
@@ -262,7 +282,13 @@ Solo para emergencias o cuando la terminal no esté disponible:
 1. Ir a `https://<dominio_sta>/web/database/manager`
 2. Clic en el ícono de descarga (↓) junto a la DB
 3. Elegir formato: **ZIP** (incluye filestore) o **pg_dump** (solo DB)
-4. Ingresar la Master Password (`admin_passwd` de `odoo.conf`)
+4. Ingresar la Master Password (`ODOO_MASTER_PASSWD` del `.env`)
+
+> Con `list_db=False` y el bloqueo de `/web/database` en Nginx, el manager web
+> **no** es accesible desde internet en los entornos generados por los scripts.
+> Para usarlo, hacelo desde la red interna del servidor o mediante un túnel SSH
+> (`ssh -L 8069:127.0.0.1:19020 usuario@servidor`). El terminal sigue siendo la
+> vía preferida.
 
 > El terminal es preferible: backup atómico, comprimido, controlado por cron y sin
 > límites de tamaño del navegador.
@@ -273,7 +299,7 @@ Solo para emergencias o cuando la terminal no esté disponible:
 
 ```bash
 # Al equipo local
-scp usuario@IP_SERVIDOR:/opt/odoo-infra/backups/motomarket/db/*.sql.gz ~/backups/
+scp usuario@IP_SERVIDOR:/opt/odoo-infra/backups/farmaniacos/db/*.sql.gz ~/backups/
 
 # A AWS S3 (sincroniza todo el árbol de backups)
 aws s3 sync /opt/odoo-infra/backups/ \
@@ -290,12 +316,12 @@ rclone copy /opt/odoo-infra/backups/ gdrive:odoo-staging-backups/
 
 ```bash
 # DB
-gzip -t backups/motomarket/db/20260511_020000_motomarket_sta_principal.sql.gz
+gzip -t backups/farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
 echo "Exit code: $?"   # 0 = OK
 
 # Filestore
-gzip -t backups/motomarket/filestore/20260511_020000_motomarket_sta_principal_filestore.tar.gz
-tar tzf  backups/motomarket/filestore/20260511_020000_motomarket_sta_principal_filestore.tar.gz | head
+gzip -t backups/farmaniacos/filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz
+tar tzf  backups/farmaniacos/filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz | head
 ```
 
 ---

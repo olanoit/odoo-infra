@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# EXTENDRIX — sync-projects.sh
+# OLANOIT — sync-projects.sh
 #
 # Lee projects-registry.conf y aplica automáticamente los proyectos nuevos.
 # Los proyectos ya desplegados son detectados y omitidos automáticamente.
@@ -180,7 +180,7 @@ NEW_PROJECTS=0
 APPLIED_NAMES=()
 
 echo ""
-echo -e "${BOLD}══ EXTENDRIX — Sync Projects ══${NC}"
+echo -e "${BOLD}══ OLANOIT — Sync Projects ══${NC}"
 $APPLY && echo -e "  Modo: ${GREEN}APLICAR${NC}" || echo -e "  Modo: ${YELLOW}DRY-RUN${NC} (usa --apply para aplicar cambios)"
 echo ""
 
@@ -231,14 +231,14 @@ while IFS=: read -r PROYECTO VERSION ENTORNO DOMINIO PUERTO_HTTP; do
         LIMIT_CPU=60;  LIMIT_REAL=120; DB_MAXCONN=24
         CRON_THREADS=2; WS_BURST=10;  WS_DELAY=0.2
         CACHE_CTRL="public, immutable"; EXPIRES="30d"; LOGIN_BURST=3
-        SSL_CACHE_SIZE="10m"; ADMIN_PASSWD="Staging@3xt3ndr1x"
+        SSL_CACHE_SIZE="10m"; MEM_LIMIT="3g"; CPUS="2.0"
     else
         WORKERS=2; LOG_LEVEL="info"
         MEM_SOFT=1073741824; MEM_HARD=1610612736
         LIMIT_CPU=120; LIMIT_REAL=240; DB_MAXCONN=16
         CRON_THREADS=1; WS_BURST=20;  WS_DELAY=0.1
         CACHE_CTRL="public"; EXPIRES="7d"; LOGIN_BURST=5
-        SSL_CACHE_SIZE="5m"; ADMIN_PASSWD="Testing@3xt3ndr1x"
+        SSL_CACHE_SIZE="5m"; MEM_LIMIT="2g"; CPUS="1.0"
     fi
 
     TMP=$(mktemp -d)
@@ -256,7 +256,7 @@ while IFS=: read -r PROYECTO VERSION ENTORNO DOMINIO PUERTO_HTTP; do
     CONF_FILE="projects/${PROYECTO}/odoo${VERSION}/${ENTORNO}/config/odoo.conf"
     cat > "$CONF_FILE" << ODOOCONF
 # =============================================================================
-# EXTENDRIX — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
+# OLANOIT — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
 # Contenedor: ${CONTAINER_NAME}
 # Generado por: sync-projects.sh
 # =============================================================================
@@ -285,8 +285,10 @@ db_maxconn         = ${DB_MAXCONN}
 log_level   = ${LOG_LEVEL}
 log_handler = :WARNING,werkzeug:CRITICAL
 
-list_db      = True
-admin_passwd = ${ADMIN_PASSWD}
+# list_db=False: oculta el listado de bases de datos en el gestor web.
+# admin_passwd NO se escribe acá (sería un secreto versionado); se inyecta por
+# línea de comandos vía --admin-passwd=\${ODOO_MASTER_PASSWD} desde docker-compose.
+list_db      = False
 
 max_cron_threads = ${CRON_THREADS}
 unaccent         = True
@@ -330,7 +332,11 @@ ODOOCONF
       - "127.0.0.1:${PUERTO_LP}:8072"
     networks:
       - odoo_net
-    command: odoo --config=/etc/odoo/odoo.conf
+    command: ["odoo", "--config=/etc/odoo/odoo.conf", "--admin-passwd=\${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}"]
+    # Límites de recursos: evitan que una instancia agote la RAM/CPU del host
+    # y afecte al resto de proyectos del servidor compartido.
+    mem_limit: ${MEM_LIMIT}
+    cpus: ${CPUS}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8069/web/health || exit 1"]
       interval: 30s
@@ -456,6 +462,12 @@ server {
         include /etc/nginx/conf.d/odoo-proxy-params.conf;
         expires ${EXPIRES}; add_header Cache-Control "${CACHE_CTRL}"; access_log off;
     }
+    # Gestor de bases de datos deshabilitado de cara a internet.
+    # Redundante con list_db=False, pero bloquea también crear/borrar/restaurar
+    # vía web. Para operar el manager, hazlo desde la red interna o con un túnel.
+    location /web/database {
+        return 404;
+    }
     location / {
         proxy_pass http://up_${PROYECTO}_${ENTORNO}_http;
         include /etc/nginx/conf.d/odoo-proxy-params.conf;
@@ -470,7 +482,7 @@ VHOSTBLOCK
     APPLIED_NAMES+=("$CONTAINER_NAME")
 
     # ── 7. Agregar bloque por defecto a docker-compose.override.yml ───────────
-    # entrypoint + addons-path con shared-addons/extendrix_extra_addons/tools.
+    # entrypoint + addons-path con shared-addons/OLANOIT_extra_addons/tools.
     # Idempotente: si ya existe, se omite. Editá manualmente el override después
     # para agregar mercadolibre, account u otros shared-addons.
     if [[ -x ./scripts/sync-overrides.sh ]]; then

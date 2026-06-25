@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# EXTENDRIX — new-project.sh
+# OLANOIT — new-project.sh
 # Crea la estructura de directorios y archivos base para un nuevo proyecto.
 #
 # USO:
@@ -41,7 +41,7 @@ VOLUME_NAME="odoo${VERSION}_${PROYECTO}_${ENTORNO}_data"
 DB_PREFIX="${PROYECTO}_${ENTORNO}"
 
 echo ""
-echo -e "${BOLD}══ EXTENDRIX — Nuevo Proyecto ══${NC}"
+echo -e "${BOLD}══ OLANOIT — Nuevo Proyecto ══${NC}"
 echo ""
 echo -e "  Proyecto    : ${CYAN}$PROYECTO${NC}"
 echo -e "  Odoo        : ${CYAN}$VERSION${NC}"
@@ -65,18 +65,18 @@ info "Directorios creados."
 # ─── 2. Crear odoo.conf ───────────────────────────────────────────────────────
 CONF_FILE="projects/${PROYECTO}/odoo${VERSION}/${ENTORNO}/config/odoo.conf"
 
-# Determinar workers y logging según entorno
+# Determinar workers, logging y límites de recursos según entorno
 if [[ "$ENTORNO" == "prod" || "$ENTORNO" == "sta" ]]; then
     WORKERS=4; LOG_LEVEL="warn"; MEM_SOFT=2147483648; MEM_HARD=2684354560
-    ADMIN_PASSWD="Staging@3xt3ndr1x"
+    MEM_LIMIT="3g"; CPUS="2.0"
 else
     WORKERS=2; LOG_LEVEL="info"; MEM_SOFT=1073741824; MEM_HARD=1610612736
-    ADMIN_PASSWD="Testing@3xt3ndr1x"
+    MEM_LIMIT="2g"; CPUS="1.0"
 fi
 
 cat > "$CONF_FILE" << EOF
 # =============================================================================
-# EXTENDRIX — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
+# OLANOIT — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
 # Contenedor: ${CONTAINER_NAME}
 # Generado por: new-project.sh
 # =============================================================================
@@ -113,8 +113,10 @@ db_maxconn         = 24
 log_level   = ${LOG_LEVEL}
 log_handler = :WARNING,werkzeug:CRITICAL
 
-list_db      = True
-admin_passwd = ${ADMIN_PASSWD}
+# list_db=False: oculta el listado de bases de datos en el gestor web.
+# admin_passwd NO se escribe acá (sería un secreto versionado); se inyecta por
+# línea de comandos vía --admin-passwd=\${ODOO_MASTER_PASSWD} desde docker-compose.
+list_db      = False
 
 max_cron_threads = 2
 unaccent         = True
@@ -158,7 +160,9 @@ cat << EOF
       - "127.0.0.1:${PUERTO_LP}:8072"
     networks:
       - odoo_net
-    command: odoo --config=/etc/odoo/odoo.conf
+    command: ["odoo", "--config=/etc/odoo/odoo.conf", "--admin-passwd=\${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}"]
+    mem_limit: ${MEM_LIMIT}
+    cpus: ${CPUS}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8069/web/health || exit 1"]
       interval: 30s

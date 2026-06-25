@@ -34,10 +34,10 @@ docker system df                           # espacio usado por Docker
 ./scripts/ops.sh stop
 
 # ─── Iniciar un solo contenedor ─────────────────────────────────────────
-docker compose start odoo19_motomarket_sta
+docker compose start odoo19_farmaniacos_sta
 
 # ─── Detener un solo contenedor ─────────────────────────────────────────
-docker compose stop odoo19_motomarket_sta
+docker compose stop odoo19_farmaniacos_sta
 
 # ─── Detener y eliminar contenedores (conserva volúmenes y datos) ────────
 docker compose down
@@ -52,7 +52,7 @@ docker compose down -v   # PELIGROSO — solo en entornos de prueba
 
 ```bash
 # Reiniciar UN contenedor Odoo
-docker compose restart odoo19_motomarket_sta
+docker compose restart odoo19_farmaniacos_sta
 
 # Reiniciar Nginx (después de cambiar configuración)
 docker compose restart nginx
@@ -70,13 +70,13 @@ docker compose restart
 
 ```bash
 # Logs en tiempo real de un contenedor
-docker compose logs -f odoo19_motomarket_sta
+docker compose logs -f odoo19_farmaniacos_sta
 
 # Últimas N líneas + seguir en tiempo real
-./scripts/ops.sh logs odoo19_motomarket_sta 200
+./scripts/ops.sh logs odoo19_farmaniacos_sta 200
 
 # Solo errores
-docker logs odoo19_motomarket_sta 2>&1 | grep -E "ERROR|CRITICAL|Traceback"
+docker logs odoo19_farmaniacos_sta 2>&1 | grep -E "ERROR|CRITICAL|Traceback"
 
 # Logs de Nginx (accesos)
 docker logs odoo_nginx 2>&1 | tail -50
@@ -94,13 +94,13 @@ docker compose logs -f --tail=20
 
 ```bash
 # Actualizar un módulo
-./scripts/ops.sh module odoo19_motomarket_sta motomarket_sta_principal mi_modulo update
+./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
 
 # Instalar un módulo nuevo
-./scripts/ops.sh module odoo19_motomarket_sta motomarket_sta_principal mi_modulo install
+./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal mi_modulo install
 
 # Actualizar múltiples módulos
-./scripts/ops.sh module odoo19_motomarket_sta motomarket_sta_principal "modulo1,modulo2" update
+./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal "modulo1,modulo2" update
 ```
 
 ---
@@ -109,16 +109,16 @@ docker compose logs -f --tail=20
 
 ```bash
 # Shell interactivo dentro del contenedor Odoo
-docker exec -it odoo19_motomarket_sta bash
+docker exec -it odoo19_farmaniacos_sta bash
 
 # Ejecutar un comando Python en el contexto de Odoo (scaffold, etc.)
-docker exec -it odoo19_motomarket_sta python3 -c "import odoo; print(odoo.__version__)"
+docker exec -it odoo19_farmaniacos_sta python3 -c "import odoo; print(odoo.__version__)"
 
 # Ejecutar query SQL directamente en PostgreSQL
-docker exec -it odoo_postgres psql -U odoo -d motomarket_sta_principal -c "SELECT version();"
+docker exec -it odoo_postgres psql -U odoo -d farmaniacos_sta_principal -c "SELECT version();"
 
 # Acceder a psql interactivo de una DB
-docker exec -it odoo_postgres psql -U odoo -d motomarket_sta_principal
+docker exec -it odoo_postgres psql -U odoo -d farmaniacos_sta_principal
 ```
 
 ---
@@ -134,10 +134,10 @@ docker exec odoo_postgres psql -U odoo -t -c \
   "SELECT datname FROM pg_database WHERE datistemplate=false AND datname!='postgres' ORDER BY datname;"
 
 # Crear una nueva DB vacía (Odoo la inicializará al acceder)
-docker exec odoo_postgres createdb -U odoo motomarket_sta_pruebas
+docker exec odoo_postgres createdb -U odoo farmaniacos_sta_pruebas
 
 # Eliminar una DB (⚠️ irreversible)
-docker exec odoo_postgres dropdb -U odoo motomarket_sta_pruebas
+docker exec odoo_postgres dropdb -U odoo farmaniacos_sta_pruebas
 
 # Ver tamaño de cada DB
 docker exec odoo_postgres psql -U odoo -c \
@@ -154,15 +154,15 @@ docker exec odoo_postgres psql -U odoo -c \
 
 ```bash
 # Usar el shortcut del script:
-./scripts/ops.sh db-query odoo19_motomarket_sta motomarket_sta_principal \
+./scripts/ops.sh db-query odoo19_farmaniacos_sta farmaniacos_sta_principal \
   "SELECT login, name, active FROM res_users ORDER BY login LIMIT 20;"
 
 # Ver los módulos instalados en una DB
-./scripts/ops.sh db-query odoo19_motomarket_sta motomarket_sta_principal \
+./scripts/ops.sh db-query odoo19_farmaniacos_sta farmaniacos_sta_principal \
   "SELECT name, state, latest_version FROM ir_module_module WHERE state='installed' ORDER BY name;"
 
 # Ver tamaño de las tablas más grandes
-./scripts/ops.sh db-query odoo19_motomarket_sta motomarket_sta_principal \
+./scripts/ops.sh db-query odoo19_farmaniacos_sta farmaniacos_sta_principal \
   "SELECT tablename, pg_size_pretty(pg_total_relation_size(tablename::regclass)) AS size FROM pg_tables WHERE schemaname='public' ORDER BY pg_total_relation_size(tablename::regclass) DESC LIMIT 20;"
 ```
 
@@ -172,7 +172,7 @@ docker exec odoo_postgres psql -U odoo -c \
 
 ```bash
 # Actualizar imagen de un Odoo específico (baja la nueva patch version)
-./scripts/ops.sh update-image odoo19_motomarket_sta
+./scripts/ops.sh update-image odoo19_farmaniacos_sta
 
 # Actualizar todas las imágenes
 docker compose pull
@@ -196,7 +196,7 @@ docker image prune -f
 docker compose run --rm certbot certificates
 
 # Ver fecha sin Certbot
-echo | openssl s_client -connect motomarket-sta.extendrix.work:443 2>/dev/null \
+echo | openssl s_client -connect farmaniacos-sta.OLANOIT.work:443 2>/dev/null \
   | openssl x509 -noout -dates
 ```
 
@@ -205,16 +205,16 @@ echo | openssl s_client -connect motomarket-sta.extendrix.work:443 2>/dev/null \
 ## Backups (volumen central ./backups)
 
 ```bash
-# Backup completo (DB + filestore) → ./backups/motomarket/
-./scripts/ops.sh backup motomarket odoo19_motomarket_sta motomarket_sta_principal
+# Backup completo (DB + filestore) → ./backups/farmaniacos/
+./scripts/ops.sh backup farmaniacos odoo19_farmaniacos_sta farmaniacos_sta_principal
 
 # Listar todos los backups disponibles
 ./scripts/ops.sh list-backups
-./scripts/ops.sh list-backups motomarket
+./scripts/ops.sh list-backups farmaniacos
 
 # Restaurar (auto-detecta filestore del mismo timestamp)
-./scripts/ops.sh restore odoo19_motomarket_sta motomarket_sta_copia \
-  motomarket/db/20260511_020000_motomarket_sta_principal.sql.gz
+./scripts/ops.sh restore odoo19_farmaniacos_sta farmaniacos_sta_copia \
+  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
 
 # Backup de TODAS las DBs de staging
 ./scripts/ops.sh backup-all
@@ -248,15 +248,15 @@ ssh -L 5433:localhost:5432 usuario@IP_SERVIDOR -N &
 
 ```bash
 # Ver la configuración activa de un contenedor (fusión de odoo.conf + CLI override)
-docker inspect odoo19_motomarket_sta \
+docker inspect odoo19_farmaniacos_sta \
   --format '{{range .Args}}{{.}} {{end}}' | tr ' ' '\n'
 
 # Ver addons_path efectivo dentro del contenedor
-docker exec odoo19_motomarket_sta python3 -c \
+docker exec odoo19_farmaniacos_sta python3 -c \
   "import odoo.tools; print(odoo.tools.config['addons_path'])"
 
 # Aplicar cambios del override a un contenedor específico
-docker compose up -d --force-recreate odoo19_motomarket_sta
+docker compose up -d --force-recreate odoo19_farmaniacos_sta
 
 # Ver si hay override activo
 cat /opt/odoo-infra/docker-compose.override.yml
@@ -273,17 +273,17 @@ Ver guía completa en [07-configuracion-por-servidor.md](07-configuracion-por-se
 
 ```bash
 # Ver si hay un proceso bloqueando la DB
-./scripts/ops.sh db-query odoo19_motomarket_sta motomarket_sta_principal \
+./scripts/ops.sh db-query odoo19_farmaniacos_sta farmaniacos_sta_principal \
   "SELECT pid, now() - pg_stat_activity.query_start AS duration, query, state FROM pg_stat_activity WHERE state != 'idle' AND query_start < now() - interval '5 minutes';"
 
 # Matar un proceso de DB bloqueado
-./scripts/ops.sh db-query odoo19_motomarket_sta motomarket_sta_principal \
+./scripts/ops.sh db-query odoo19_farmaniacos_sta farmaniacos_sta_principal \
   "SELECT pg_terminate_backend(PID_A_MATAR);"
 
 # Forzar la reconstrucción de un contenedor sin datos
-docker compose stop odoo19_motomarket_sta
-docker compose rm -f odoo19_motomarket_sta
-docker compose up -d odoo19_motomarket_sta
+docker compose stop odoo19_farmaniacos_sta
+docker compose rm -f odoo19_farmaniacos_sta
+docker compose up -d odoo19_farmaniacos_sta
 
 # Si Nginx no recarga bien la config nueva:
 docker compose exec nginx nginx -t          # probar config

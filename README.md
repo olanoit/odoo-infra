@@ -1,4 +1,4 @@
-# EXTENDRIX — Odoo Multi-Version Orchestration (Staging)
+# OLANOIT — Odoo Multi-Version Orchestration (Staging)
 
 **Esta versión del orquestador está dedicada exclusivamente a entornos de _staging_.**
 Todos los contenedores, bases de datos y dominios usan el sufijo `_sta`. No se
@@ -6,9 +6,9 @@ despliegan instancias `dev` ni `prod` desde este repo.
 
 | Convención    | Formato                            | Ejemplo                          |
 |---------------|------------------------------------|----------------------------------|
-| Contenedor    | `odoo{VERSION}_{PROYECTO}_sta`     | `odoo19_motomarket_sta`          |
-| Base de datos | `{proyecto}_sta_*`                 | `motomarket_sta_principal`       |
-| Subdominio    | `{proyecto}-sta.<dominio>`         | `motomarket-sta.extendrix.work`  |
+| Contenedor    | `odoo{VERSION}_{PROYECTO}_sta`     | `odoo19_farmaniacos_sta`          |
+| Base de datos | `{proyecto}_sta_*`                 | `farmaniacos_sta_principal`       |
+| Subdominio    | `{proyecto}-sta.<dominio>`         | `farmaniacos-sta.OLANOIT.work`  |
 | Puertos host  | `{ver}010..{ver}099` (HTTP) + 1 LP | `19020/19021`                    |
 
 ---
@@ -17,7 +17,7 @@ despliegan instancias `dev` ni `prod` desde este repo.
 
 | Contenedor              | Versión | Proyecto    | Subdominio                       | HTTP  | LP    |
 |-------------------------|---------|-------------|----------------------------------|-------|-------|
-| `odoo19_motomarket_sta` | 19      | motomarket  | motomarket-sta.extendrix.work    | 19020 | 19021 |
+| `odoo19_farmaniacos_sta` | 19      | farmaniacos  | farmaniacos-sta.OLANOIT.work    | 19020 | 19021 |
 
 Para añadir otro proyecto de staging, ver
 [02-agregar-proyecto-dominio.md](docs/02-agregar-proyecto-dominio.md).
@@ -71,6 +71,7 @@ odoo-multi-version/
 │   ├── delete-project.sh           ← borra un proyecto entero (con confirmación)
 │   ├── setup-ssl.sh                ← emite SSL inicial vía Certbot
 │   ├── nginx-dedupe.sh             ← limpia bloques duplicados en confs de nginx
+│   ├── backup-cron.sh             ← backup-all + retención, para cron
 │   └── odoo-entrypoint.sh          ← instala requirements.txt de shared-addons al startup
 │
 └── docs/                           ← guías paso a paso
@@ -80,7 +81,8 @@ odoo-multi-version/
     ├── 04-actualizar-modulo.md
     ├── 05-backups.md
     ├── 06-operaciones-cheatsheet.md
-    └── 07-configuracion-por-servidor.md
+    ├── 07-configuracion-por-servidor.md
+    └── 08-checklist-produccion.md
 ```
 
 ---
@@ -93,7 +95,7 @@ odoo-multi-version/
 |----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | `docker-compose.yml`             | Receta de Docker: declara los contenedores (postgres compartido, nginx, certbot y un Odoo por proyecto), sus volúmenes y red. Es la "fuente de verdad" del servidor. **Se commitea al repo.** |
 | `docker-compose.override.yml`    | Customización **por servidor** (workers, memoria, addons-path específicos). Docker lo merge encima del `docker-compose.yml`. **NO se commitea** — cada servidor tiene el suyo. Lo genera `sync-overrides.sh`. |
-| `.env.example`                   | Plantilla de variables sensibles (POSTGRES_PASSWORD, CERTBOT_EMAIL, DOMAIN_*). Copialo a `.env` y editalo con los valores reales del servidor. |
+| `.env.example`                   | Plantilla de variables sensibles (POSTGRES_PASSWORD, **ODOO_MASTER_PASSWD**, CERTBOT_EMAIL, DOMAIN_*). Copialo a `.env` y editalo con los valores reales del servidor. |
 | `.env`                           | (gitignored) valores reales. Lo lee `docker-compose.yml` y todos los scripts.                                                        |
 | `projects-registry.conf`         | Lista plana de proyectos del servidor (uno por línea: `proyecto:version:entorno:dominio:puerto`). Es lo que lee `sync-projects.sh` para saber qué desplegar. |
 | `.gitignore`                     | Marca qué archivos/dirs no se commitean (backups, override.yml, certs SSL, addons reales, etc.).                                     |
@@ -144,6 +146,7 @@ odoo-multi-version/
 | `scripts/setup-ssl.sh`       | Emisión inicial de certificados SSL vía Certbot (legado — `sync-projects.sh --ssl` lo reemplaza en flujos nuevos).                                       |
 | `scripts/nginx-dedupe.sh`    | Limpia bloques duplicados en `00-upstreams.conf` y `vhosts-projects.conf` (típico tras varias corridas de `sync-projects.sh` en escenarios de reset).    |
 | `scripts/odoo-entrypoint.sh` | Wrapper de arranque del container Odoo: instala `requirements.txt` de módulos en `shared-addons/` antes de pasarle el control al entrypoint oficial.    |
+| `scripts/backup-cron.sh`     | Backup automático no interactivo (`backup-all`) + retención configurable (`RETENTION_DAYS`). Pensado para `cron`. Ver [docs/05-backups.md](docs/05-backups.md).    |
 
 ### Documentación
 
@@ -156,6 +159,7 @@ odoo-multi-version/
 | `docs/05-backups.md`                     | Backup, restauración local, restauración de backups de OTROS servidores, política de retención. |
 | `docs/06-operaciones-cheatsheet.md`      | Comandos del día a día agrupados por tarea.                        |
 | `docs/07-configuracion-por-servidor.md`  | Cómo personalizar workers, memoria y addons-path por servidor con el override. |
+| `docs/08-checklist-produccion.md`        | Checklist para salir a producción: qué está cubierto, qué verificar y limitaciones conocidas. |
 
 ---
 
@@ -166,13 +170,10 @@ odoo-multi-version/
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER && newgrp docker
 
-# 2. Configurar variables
+# 2. Configurar variables (POSTGRES_PASSWORD y ODOO_MASTER_PASSWD son obligatorias)
 cp .env.example .env && nano .env
 
-# 3. Cambiar admin_passwd en el odoo.conf de cada proyecto staging
-nano projects/motomarket/odoo19/sta/config/odoo.conf
-
-# 4. Emitir SSL (DNS debe apuntar al servidor primero)
+# 3. Emitir SSL (DNS debe apuntar al servidor primero)
 chmod +x scripts/*.sh && ./scripts/setup-ssl.sh
 
 # 5. Levantar todo
@@ -188,21 +189,21 @@ chmod +x scripts/*.sh && ./scripts/setup-ssl.sh
 
 ```bash
 ./scripts/ops.sh health
-./scripts/ops.sh logs odoo19_motomarket_sta 200
-./scripts/ops.sh restart odoo19_motomarket_sta
+./scripts/ops.sh logs odoo19_farmaniacos_sta 200
+./scripts/ops.sh restart odoo19_farmaniacos_sta
 
 # Actualizar un módulo en una DB de staging
-./scripts/ops.sh module odoo19_motomarket_sta motomarket_sta_principal mi_modulo update
+./scripts/ops.sh module odoo19_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
 
-# Backup (DB + filestore → ./backups/motomarket/)
-./scripts/ops.sh backup motomarket odoo19_motomarket_sta motomarket_sta_principal
+# Backup (DB + filestore → ./backups/farmaniacos/)
+./scripts/ops.sh backup farmaniacos odoo19_farmaniacos_sta farmaniacos_sta_principal
 
 # Listar backups disponibles
-./scripts/ops.sh list-backups motomarket
+./scripts/ops.sh list-backups farmaniacos
 
 # Restaurar (auto-detecta filestore por timestamp)
-./scripts/ops.sh restore odoo19_motomarket_sta motomarket_sta_copia \
-  motomarket/db/20260511_020000_motomarket_sta_principal.sql.gz
+./scripts/ops.sh restore odoo19_farmaniacos_sta farmaniacos_sta_copia \
+  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
 
 # Restaurar un backup que viene de otro servidor (.tar.gz / .zip / .sql.gz)
 ./scripts/ops.sh restore-external odoo18_reycar_sta reycar_sta_principal \

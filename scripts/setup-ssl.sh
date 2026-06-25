@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# EXTENDRIX — setup-ssl.sh
+# OLANOIT — setup-ssl.sh
 # Emisión inicial de certificados SSL para todos los dominios configurados.
 # Ejecutar UNA VEZ durante el setup inicial del servidor.
 # =============================================================================
@@ -30,7 +30,7 @@ done
 [[ ${#DOMAINS[@]} -eq 0 ]] && error "No se encontraron dominios configurados en .env (variables DOMAIN_*)"
 
 echo ""
-echo "══ EXTENDRIX — Setup SSL ══"
+echo "══ OLANOIT — Setup SSL ══"
 echo ""
 echo "Dominios a certificar:"
 for d in "${DOMAINS[@]}"; do echo "  - $d"; done

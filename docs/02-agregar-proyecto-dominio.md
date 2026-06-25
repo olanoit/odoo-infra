@@ -120,7 +120,7 @@ Los proyectos ya desplegados son detectados y omitidos automáticamente.
 # Si el proyecto es Odoo 19 y el módulo ya está en shared-addons/19/, ya está disponible.
 # Para agregar un nuevo módulo compartido a una versión específica:
 cd shared-addons/19/    # o 18/, 17/ — según la versión del proyecto
-git clone -b 19.0 https://github.com/extendrix/al_l10n_pe_edi.git
+git clone -b 19.0 https://github.com/OLANOIT/al_l10n_pe_edi.git
 ```
 
 ### Paso 6 — Validar el despliegue
@@ -199,9 +199,13 @@ http_interface =
 # Debe incluir enterprise y shared-addons
 addons_path = /usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons,/mnt/extra-addons
 
-# Listado de bases de datos habilitado
-list_db = True
+# Listado de bases de datos deshabilitado (seguridad). El gestor web no lista DBs.
+list_db = False
 ```
+
+> La master password (`admin_passwd`) **no** está en el `odoo.conf`: se inyecta
+> desde `ODOO_MASTER_PASSWD` (`.env`) por `--admin-passwd`. Asegúrate de tener esa
+> variable definida o el contenedor no arrancará.
 
 ### PARTE C — Servicio en `docker-compose.yml`
 
@@ -230,7 +234,9 @@ list_db = True
       - "127.0.0.1:19021:8072"
     networks:
       - odoo_net
-    command: odoo --config=/etc/odoo/odoo.conf
+    command: ["odoo", "--config=/etc/odoo/odoo.conf", "--admin-passwd=${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}"]
+    mem_limit: 3g
+    cpus: 2.0
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8069/web/health || exit 1"]
       interval: 30s
