@@ -1,0 +1,202 @@
+# =============================================================================
+# EXTENDRIX — Multi-Version Odoo Orchestration
+#
+# Infraestructura base: PostgreSQL + Nginx + Certbot
+# Los servicios Odoo se agregan via sync-projects.sh o new-project.sh
+#
+# Convención de nombres de contenedores:
+#   odoo{VERSION}_{PROYECTO}_{ENTORNO}
+#   Ejemplos: odoo18_micliente_dev | odoo19_otroproyecto_sta
+#
+# PUERTOS INTERNOS (solo accesibles vía Nginx, bindeados a 127.0.0.1):
+#   Odoo 17: 17010–17099   Odoo 18: 18010–18099   Odoo 19: 19010–19099
+#   Puerto longpolling = puerto_http + 1  (ej: 19010 → 19011)
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # BASE DE DATOS — PostgreSQL 16 compartida
+  # Prefijo de DB por proyecto: {proyecto}_{entorno}_*
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: odoo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-odoo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Variable POSTGRES_PASSWORD requerida en .env}
+      POSTGRES_DB:       postgres
+    command: >
+      postgres
+        -c max_connections=200
+        -c shared_buffers=512MB
+        -c effective_cache_size=1536MB
+        -c maintenance_work_mem=128MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c work_mem=4MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+        -c log_min_duration_statement=2000
+        -c log_line_prefix='%t [%p] user=%u db=%d app=%a '
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      # Volumen central de backups (DB dumps). Misma ruta /backups en todos los contenedores.
+      - ./backups:/backups
+    shm_size: '2gb'
+    networks:
+      - odoo_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options: { max-size: "50m", max-file: "3" }
+
+  # ---------------------------------------------------------------------------
+  # NGINX — Proxy inverso + SSL
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: odoo_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt:ro
+    networks:
+      - odoo_net
+    logging:
+      driver: "json-file"
+      options: { max-size: "50m", max-file: "3" }
+
+  # ---------------------------------------------------------------------------
+  # CERTBOT — Renovación automática SSL cada 12h
+  # ---------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot:latest
+    container_name: odoo_certbot
+    restart: unless-stopped
+    volumes:
+      - ./nginx/certbot/www:/var/www/certbot
+      - ./nginx/certbot/conf:/etc/letsencrypt
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+
+  # ---------------------------------------------------------------------------
+
+  # ---------------------------------------------------------------------------
+  # ODOO 19 | MOTOMARKET | STA
+  # Contenedor : odoo19_motomarket_sta
+  # Subdominio : motomarket-sta.extendrix.work
+  # DB prefix  : motomarket_sta_
+  # ---------------------------------------------------------------------------
+  odoo19_motomarket_sta:
+    image: odoo:19.0
+    container_name: odoo19_motomarket_sta
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HOST: db
+      PORT: 5432
+      USER: ${POSTGRES_USER:-odoo}
+      PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - odoo19_motomarket_sta_data:/var/lib/odoo
+      - ./projects/motomarket/odoo19/sta/config/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./projects/motomarket/odoo19/sta/addons:/mnt/extra-addons
+      - ./shared-addons/19:/mnt/shared-addons:ro
+      - ./enterprise/odoo19:/mnt/enterprise:ro
+      # Volumen central de backups (filestore tarballs). Compartido con postgres.
+      - ./backups:/backups
+    ports:
+      - "127.0.0.1:19020:8069"
+      - "127.0.0.1:19021:8072"
+    networks:
+      - odoo_net
+    command: odoo --config=/etc/odoo/odoo.conf
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8069/web/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options: { max-size: "100m", max-file: "5" }
+
+
+  # __SYNC_SERVICES_INSERT__
+
+  # PLANTILLA — Copiar para agregar un nuevo proyecto manualmente
+  # Ver docs/02-agregar-proyecto-dominio.md o usar sync-projects.sh
+  # ---------------------------------------------------------------------------
+  # odoo{VERSION}_{PROYECTO}_{ENTORNO}:
+  #   image: odoo:{VERSION}.0
+  #   container_name: odoo{VERSION}_{PROYECTO}_{ENTORNO}
+  #   restart: unless-stopped
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     HOST: db
+  #     PORT: 5432
+  #     USER: ${POSTGRES_USER:-odoo}
+  #     PASSWORD: ${POSTGRES_PASSWORD}
+  #   volumes:
+  #     - odoo{VERSION}_{PROYECTO}_{ENTORNO}_data:/var/lib/odoo
+  #     - ./projects/{PROYECTO}/odoo{VERSION}/{ENTORNO}/config/odoo.conf:/etc/odoo/odoo.conf:ro
+  #     - ./projects/{PROYECTO}/odoo{VERSION}/{ENTORNO}/addons:/mnt/extra-addons
+  #     - ./shared-addons/{VERSION}:/mnt/shared-addons:ro
+  #     - ./enterprise/odoo{VERSION}:/mnt/enterprise:ro
+  #     - ./backups:/backups
+  #   ports:
+  #     - "127.0.0.1:{PUERTO_HTTP}:8069"
+  #     - "127.0.0.1:{PUERTO_LP}:8072"
+  #   networks:
+  #     - odoo_net
+  #   command: odoo --config=/etc/odoo/odoo.conf
+
+
+
+# =============================================================================
+# VOLÚMENES
+# =============================================================================
+volumes:
+  postgres_data:
+    name: odoo_postgres_data
+
+  odoo19_motomarket_sta_data:
+    name: odoo19_motomarket_sta_data
+
+
+  # __SYNC_VOLUMES_INSERT__
+
+  # Agregar aquí el volumen de cada nuevo proyecto:
+  # odoo{VERSION}_{PROYECTO}_{ENTORNO}_data:
+  #   name: odoo{VERSION}_{PROYECTO}_{ENTORNO}_data
+
+# =============================================================================
+# RED INTERNA
+# =============================================================================
+networks:
+  odoo_net:
+    driver: bridge
+    name: odoo_internal_net
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
