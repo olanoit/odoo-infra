@@ -164,6 +164,78 @@ Para automatizar el refresco de la copia, podés programar el Paso 3 en `cron`
 
 ---
 
+## Acceso por IP (antes de propagar el DNS)
+
+Odoo escucha solo en `127.0.0.1:14010` del servidor (no expuesto a internet), y
+nginx enruta por `server_name`. Para probar `merida.odoo-rideco.mx` **antes** de
+cambiar el DNS público, hacés que tu equipo resuelva el dominio a la IP de este
+servidor con el archivo `hosts` local:
+
+- **Linux / macOS:** `sudo nano /etc/hosts`
+- **Windows:** abrir como administrador `C:\Windows\System32\drivers\etc\hosts`
+
+Agregá esta línea (IP de este servidor):
+
+```text
+198.71.54.33   merida.odoo-rideco.mx
+```
+
+Ahora navegá a `https://merida.odoo-rideco.mx` desde ese equipo: llega a este
+servidor y el certificado wildcard valida (cubre `*.odoo-rideco.mx`). **Quitá la
+línea** cuando el DNS público ya apunte acá.
+
+> Alternativa por túnel SSH (sin tocar `hosts`), accediendo directo a Odoo:
+> ```bash
+> ssh -L 8080:127.0.0.1:14010 root@198.71.54.33
+> # luego abrí http://localhost:8080
+> ```
+
+---
+
+## Cambiar el dominio del proyecto (ej. `merida2.odoo-rideco.mx`)
+
+`change-domain.sh` reescribe el `server_name` del vhost, el `projects-registry.conf`
+y el `.env`, y deja nginx apuntando al nuevo dominio. Como el nuevo subdominio
+también está cubierto por el wildcard `*.odoo-rideco.mx`, se usa `--no-ssl` (para
+**no** disparar la validación ACME de Let's Encrypt) y luego se reutiliza el
+wildcard con `wildcard-ssl.sh`.
+
+```bash
+cd /opt/odoo-infra
+
+# 1. Cambiar el dominio del proyecto (sin emitir cert ACME). El 3.º argumento es
+#    el entorno: merida es 'prod'.
+./scripts/change-domain.sh merida merida2.odoo-rideco.mx prod --no-ssl
+
+# 2. Instalar el wildcard para el nuevo subdominio (modo copia, igual que el Paso 3)
+mkdir -p /tmp/wildcard-rideco
+cat /opt/certificados/odoo-rideco.mx.cer \
+    /opt/certificados/odoo-rideco.mx_ca.cer > /tmp/wildcard-rideco/fullchain.pem
+cp  /opt/certificados/odoo-rideco.mx.key     /tmp/wildcard-rideco/privkey.pem
+cp  /opt/certificados/odoo-rideco.mx_ca.cer  /tmp/wildcard-rideco/chain.pem
+./scripts/wildcard-ssl.sh merida2.odoo-rideco.mx --from /tmp/wildcard-rideco
+rm -rf /tmp/wildcard-rideco
+
+# 3. Apuntar el DNS de merida2.odoo-rideco.mx → 198.71.54.33 (registro A)
+#    (o probarlo antes con el truco de /etc/hosts de la sección anterior)
+```
+
+Notas:
+
+- **La base de datos no cambia.** El `dbfilter` sigue siendo `^merida_prod_.*$`;
+  solo cambia el dominio por el que se accede.
+- **Dominio viejo:** en modo reemplazo (por defecto) el vhost deja de responder a
+  `merida.odoo-rideco.mx` y se elimina su cert. Si querés que el proyecto responda
+  a **ambos** dominios, usá `--add` en lugar del reemplazo:
+  ```bash
+  ./scripts/change-domain.sh merida merida2.odoo-rideco.mx prod --add --no-ssl
+  ./scripts/wildcard-ssl.sh merida2.odoo-rideco.mx --from /tmp/wildcard-rideco
+  ```
+- **Verificar antes de aplicar:** agregá `--dry-run` para ver el resumen sin tocar
+  nada.
+
+---
+
 ## Troubleshooting
 
 - **`curl` muestra cert autofirmado / `nginx -t` falla:** el Paso 3 no corrió o
