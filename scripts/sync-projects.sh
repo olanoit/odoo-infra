@@ -333,7 +333,7 @@ ODOOCONF
       PASSWORD: \${POSTGRES_PASSWORD}
       ODOO_MASTER_PASSWD: \${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}
     # El wrapper inyecta admin_passwd (Odoo 14 no soporta --admin-passwd por CLI)
-    # e instala requirements.txt de shared-addons antes de arrancar.
+    # e instala los requirements.txt de los módulos (shared/extra/enterprise) al arrancar.
     entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
     volumes:
       - ${VOLUME_NAME}:/var/lib/odoo

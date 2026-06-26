@@ -283,6 +283,61 @@ docker compose exec -T nginx nginx -s reload
 
 ---
 
+## Dependencias Python de los módulos
+
+Cuando un módulo necesita una librería de Python que la imagen `odoo:14.0` no
+trae, Odoo lo rechaza con un mensaje como:
+
+```text
+Imposible instalar el módulo "wk_backup_restore" porque hay una dependencia
+externa no resuelta: Python library not installed: python-crontab
+```
+
+El wrapper `odoo-entrypoint.sh` instala automáticamente, **en cada arranque**, los
+`requirements.txt` que encuentre (hasta 2 niveles) en:
+
+- `shared-addons/<VERSION>/<modulo>/requirements.txt`
+- `projects/<proyecto>/odoo<VERSION>/<entorno>/addons/<modulo>/requirements.txt` (extra-addons)
+- `enterprise/odoo<VERSION>/<modulo>/requirements.txt`
+
+Esto **persiste** ante `restart` y `--force-recreate` (se reinstala siempre al
+arrancar; no hay que rebuildear la imagen).
+
+### Resolver una dependencia (ej. `python-crontab`)
+
+**Opción 1 — el módulo ya trae su `requirements.txt`** (caso de los módulos de
+Webkul como `wk_backup_restore`): no hace falta crear nada, solo reiniciar para
+que el wrapper lo instale.
+
+```bash
+cd /opt/odoo-infra
+docker compose restart odoo14_merida_prod
+docker compose logs --tail 30 odoo14_merida_prod   # debe verse "[startup] Instalando dependencias: ..."
+```
+
+**Opción 2 — agregar la dependencia a mano** (si el módulo no la declara, o para
+dependencias generales del proyecto):
+
+```bash
+cd /opt/odoo-infra
+mkdir -p shared-addons/14/_deps
+echo "python-crontab" >> shared-addons/14/_deps/requirements.txt
+docker compose restart odoo14_merida_prod
+```
+
+Luego, en Odoo, reintentá **Activar** el módulo (Aplicaciones), o por CLI:
+
+```bash
+./scripts/ops.sh module odoo14_merida_prod merida_prod_principal wk_backup_restore install
+```
+
+> **Ojo con el nombre del paquete:** el nombre que importa Python puede diferir del
+> nombre en `pip`. Acá el módulo Python es `crontab` pero el paquete a instalar es
+> **`python-crontab`**. Si dudás, probá `docker exec odoo14_merida_prod pip install --break-system-packages <paquete>`
+> a mano una vez para confirmar el nombre, y luego dejalo en el `requirements.txt`.
+
+---
+
 ## Troubleshooting
 
 - **`curl` muestra cert autofirmado / `nginx -t` falla:** el Paso 3 no corrió o

@@ -5,7 +5,7 @@
 #
 # Para cada proyecto del registry que NO tenga aún su entrada en
 # docker-compose.override.yml, agrega un bloque por defecto con:
-#   • entrypoint wrapper que instala requirements.txt de shared-addons
+#   • entrypoint wrapper que instala los requirements.txt de los módulos (shared/extra/enterprise)
 #   • addons-path incluyendo EXTENDRIX_extra_addons/tools
 #   • workers/limites estándar (4 / 2GB-2.5GB)
 #

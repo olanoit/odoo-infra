@@ -79,7 +79,7 @@ odoo-multi-version/
 │   ├── nginx-dedupe.sh             ← limpia bloques duplicados en confs de nginx
 │   ├── backup-cron.sh             ← backup-all + retención, para cron
 │   ├── clean-logs.sh              ← vacía los logs Docker de uno o todos los proyectos
-│   └── odoo-entrypoint.sh          ← instala requirements.txt de shared-addons al startup
+│   └── odoo-entrypoint.sh          ← instala requirements.txt de los módulos al startup
 │
 └── docs/                           ← guías paso a paso
     ├── 01-instalacion.md

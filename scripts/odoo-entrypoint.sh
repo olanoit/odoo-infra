@@ -1,8 +1,9 @@
 #!/bin/sh
 # =============================================================================
 # EXTENDRIX — odoo-entrypoint.sh
-# Wrapper del entrypoint de Odoo: instala requirements.txt de los módulos
-# en shared-addons antes de pasar el control al entrypoint oficial.
+# Wrapper del entrypoint de Odoo: instala los requirements.txt de los módulos
+# (shared-addons, addons del proyecto y enterprise) antes de pasar el control al
+# entrypoint oficial.
 # =============================================================================
 set -e
 
@@ -46,17 +47,21 @@ _sanitize_addons_path() {
     printf '%s' "$_sap_out"
 }
 
-# Instalar dependencias Python de cualquier módulo en shared-addons que
-# tenga requirements.txt (máx 2 niveles de profundidad)
-find /mnt/shared-addons -maxdepth 2 -name requirements.txt 2>/dev/null | while read req; do
-    echo "[startup] Instalando dependencias: $req"
-    tmp_dir=$(mktemp -d)
-    cp -r "$(dirname "$req")/." "$tmp_dir/"
-    # Quitar el flag -e (editable): pip instalaría apuntando al tmp_dir que luego
-    # se borra, dejando el import roto. Sin -e, pip copia los archivos a site-packages.
-    sed 's/^-e //' "$tmp_dir/requirements.txt" > "$tmp_dir/requirements_fixed.txt"
-    (cd "$tmp_dir" && pip install --quiet --no-warn-script-location --no-cache-dir --break-system-packages -r requirements_fixed.txt)
-    rm -rf "$tmp_dir"
+# Instalar dependencias Python de cualquier módulo que tenga requirements.txt,
+# en shared-addons, en los addons del proyecto (extra-addons) y en enterprise
+# (máx 2 niveles de profundidad: <dir>/<modulo>/requirements.txt).
+for ADDONS_BASE in /mnt/shared-addons /mnt/extra-addons /mnt/enterprise; do
+    [ -d "$ADDONS_BASE" ] || continue
+    find "$ADDONS_BASE" -maxdepth 2 -name requirements.txt 2>/dev/null | while read req; do
+        echo "[startup] Instalando dependencias: $req"
+        tmp_dir=$(mktemp -d)
+        cp -r "$(dirname "$req")/." "$tmp_dir/"
+        # Quitar el flag -e (editable): pip instalaría apuntando al tmp_dir que luego
+        # se borra, dejando el import roto. Sin -e, pip copia los archivos a site-packages.
+        sed 's/^-e //' "$tmp_dir/requirements.txt" > "$tmp_dir/requirements_fixed.txt"
+        (cd "$tmp_dir" && pip install --quiet --no-warn-script-location --no-cache-dir --break-system-packages -r requirements_fixed.txt)
+        rm -rf "$tmp_dir"
+    done
 done
 
 # ── Config de runtime: admin_passwd + addons-path saneado ─────────────────────
