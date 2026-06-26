@@ -13,7 +13,7 @@ Esta guía complementa a [07-configuracion-por-servidor.md](07-configuracion-por
 
 | Área | Cómo |
 |------|------|
-| **Master password fuera del repo** | `admin_passwd` se inyecta desde `ODOO_MASTER_PASSWD` (`.env`) por `--admin-passwd`. Ningún `odoo.conf` versionado contiene secretos. Sin la variable, los contenedores **no arrancan**. |
+| **Master password fuera del repo** | `admin_passwd` lo inyecta el wrapper `odoo-entrypoint.sh` en un config de runtime desde `ODOO_MASTER_PASSWD` (`.env`) — Odoo 14 no acepta `--admin-passwd` por CLI. Ningún `odoo.conf` versionado contiene secretos. Sin la variable, los contenedores **no arrancan**. |
 | **Gestor de DB no expuesto** | `list_db = False` en todos los `odoo.conf` + Nginx devuelve `404` en `/web/database`. |
 | **Aislamiento de red** | Los puertos Odoo se publican solo en `127.0.0.1`; el acceso externo pasa siempre por Nginx con TLS. |
 | **TLS moderno** | TLSv1.2/1.3, HSTS, ciphers ECDHE, renovación automática de certificados con Certbot. |
@@ -65,8 +65,10 @@ necesita, planifícalas como trabajo aparte:
 3. **Sin alta disponibilidad.** Un solo host, un solo Nginx, un solo PostgreSQL,
    sin réplica ni failover. Apto para producción de bajo SLA; para HA hace falta
    replicación de PostgreSQL y balanceo entre nodos.
-4. **`--admin-passwd` y `PASSWORD` visibles vía `docker inspect`.** Aceptable para
-   un host de un solo administrador; si necesitás ocultarlos, usar Docker secrets.
+4. **`PASSWORD` (de la DB) visible vía `docker inspect`.** Aceptable para un host
+   de un solo administrador; si necesitás ocultarlo, usar Docker secrets. El
+   `admin_passwd` ya **no** se pasa por CLI: el wrapper lo escribe en un config de
+   runtime, por lo que no aparece en `docker inspect`.
 
 ---
 

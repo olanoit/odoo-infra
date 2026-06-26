@@ -117,13 +117,13 @@ Todos estos argumentos sobreescriben el valor equivalente en `odoo.conf`:
 | `--addons-path PATH`         | `addons_path`           | rutas    |
 | `--log-level LEVEL`          | `log_level`             | string   |
 | `--http-port N`              | `http_port`             | número   |
-| `--gevent-port N`            | `gevent_port`           | número   |
-| `--admin-passwd VALOR`       | `admin_passwd`          | string   |
+| `--longpolling-port N`       | `longpolling_port`      | número   |
 
-> **`--admin-passwd`** se inyecta siempre desde la variable `ODOO_MASTER_PASSWD`
-> del `.env` (`--admin-passwd=${ODOO_MASTER_PASSWD}`), nunca se escribe en el
-> `odoo.conf`. Los `odoo.conf` generados llevan `list_db = False`, así que el
-> gestor de bases no lista DBs; además Nginx bloquea `/web/database`.
+> **`admin_passwd` (master password):** Odoo 14 **no** acepta `--admin-passwd`
+> por línea de comandos. Lo inyecta el wrapper `odoo-entrypoint.sh` en un config
+> de runtime desde la variable `ODOO_MASTER_PASSWD` del `.env`, nunca se escribe
+> en el `odoo.conf` versionado. Los `odoo.conf` generados llevan `list_db = False`,
+> así que el gestor de bases no lista DBs; además Nginx bloquea `/web/database`.
 
 ### Referencia de memoria (bytes)
 
@@ -164,7 +164,6 @@ services:
     command:
       - odoo
       - --config=/etc/odoo/odoo.conf
-      - --admin-passwd=${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}
       - ...
 ```
 
@@ -180,7 +179,6 @@ services:
     command:
       - odoo
       - --config=/etc/odoo/odoo.conf
-      - --admin-passwd=${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}
       - --workers=2
       - --limit-memory-soft=1073741824
       - --limit-memory-hard=1610612736

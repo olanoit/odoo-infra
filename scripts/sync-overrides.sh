@@ -151,7 +151,6 @@ ${item_indent}- ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
 ${key_indent}command:
 ${item_indent}- odoo
 ${item_indent}- --config=/etc/odoo/odoo.conf
-${item_indent}- --admin-passwd=\${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}
 ${item_indent}- --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/EXTENDRIX_extra_addons/tools,/mnt/extra-addons
 ${item_indent}- --db-filter=^${project}_${entorno}_.*\$
 ${item_indent}- --workers=2

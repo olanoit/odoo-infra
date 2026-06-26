@@ -19,5 +19,35 @@ find /mnt/shared-addons -maxdepth 2 -name requirements.txt 2>/dev/null | while r
     rm -rf "$tmp_dir"
 done
 
+# ── Inyectar el master password (admin_passwd) en un config de runtime ────────
+# Odoo NO acepta --admin-passwd por línea de comandos en todas las versiones
+# (Odoo 14 falla con "no such option: --admin-passwd"), y el secreto no se
+# versiona en el odoo.conf. Si ODOO_MASTER_PASSWD está definido, generamos un
+# config efectivo en el data_dir (escribible) con admin_passwd inyectado, y
+# reescribimos los argumentos para usarlo en lugar del odoo.conf montado :ro.
+if [ -n "${ODOO_MASTER_PASSWD:-}" ]; then
+    SRC_CONF=/etc/odoo/odoo.conf
+    RT_CONF=/var/lib/odoo/.odoo-runtime.conf
+    if [ -f "$SRC_CONF" ]; then
+        # Copiar el conf quitando cualquier admin_passwd previo, y anexar el real.
+        grep -v '^[[:space:]]*admin_passwd' "$SRC_CONF" > "$RT_CONF" 2>/dev/null || cp "$SRC_CONF" "$RT_CONF"
+    else
+        printf '[options]\n' > "$RT_CONF"
+    fi
+    printf 'admin_passwd = %s\n' "${ODOO_MASTER_PASSWD}" >> "$RT_CONF"
+    chmod 600 "$RT_CONF" 2>/dev/null || true
+
+    # Reescribir argumentos: quitar --admin-passwd=* (no soportado en Odoo 14) y
+    # repuntar --config al config de runtime con el admin_passwd inyectado.
+    for arg do
+        shift
+        case "$arg" in
+            --admin-passwd=*|--admin_passwd=*) continue ;;
+            --config=*|-c=*) set -- "$@" "--config=$RT_CONF" ;;
+            *) set -- "$@" "$arg" ;;
+        esac
+    done
+fi
+
 # Pasar control al entrypoint oficial de Odoo con todos los argumentos
 exec /entrypoint.sh "$@"

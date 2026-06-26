@@ -204,9 +204,10 @@ addons_path = /usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/sh
 list_db = False
 ```
 
-> La master password (`admin_passwd`) **no** está en el `odoo.conf`: se inyecta
-> desde `ODOO_MASTER_PASSWD` (`.env`) por `--admin-passwd`. Asegúrate de tener esa
-> variable definida o el contenedor no arrancará.
+> La master password (`admin_passwd`) **no** está en el `odoo.conf`: la inyecta
+> el wrapper `odoo-entrypoint.sh` en un config de runtime desde
+> `ODOO_MASTER_PASSWD` (`.env`). Odoo 14 no acepta `--admin-passwd` por CLI.
+> Asegúrate de tener esa variable definida o el contenedor no arrancará.
 
 ### PARTE C — Servicio en `docker-compose.yml`
 
@@ -225,6 +226,7 @@ list_db = False
       PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - odoo14_merida_sta_data:/var/lib/odoo
+      - ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
       - ./projects/merida/odoo14/sta/config/odoo.conf:/etc/odoo/odoo.conf:ro
       - ./projects/merida/odoo14/sta/addons:/mnt/extra-addons
       - ./shared-addons/14:/mnt/shared-addons:ro
@@ -235,7 +237,9 @@ list_db = False
       - "127.0.0.1:14021:8072"
     networks:
       - odoo_net
-    command: ["odoo", "--config=/etc/odoo/odoo.conf", "--admin-passwd=${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}"]
+    # El wrapper inyecta admin_passwd (Odoo 14 no soporta --admin-passwd por CLI)
+    entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
+    command: ["odoo", "--config=/etc/odoo/odoo.conf"]
     mem_limit: 3g
     cpus: 2.0
     healthcheck:

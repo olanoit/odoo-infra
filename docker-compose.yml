@@ -122,8 +122,11 @@ services:
   #     PORT: 5432
   #     USER: ${POSTGRES_USER:-odoo}
   #     PASSWORD: ${POSTGRES_PASSWORD}
+  #   # El wrapper inyecta admin_passwd (Odoo 14 no soporta --admin-passwd por CLI).
+  #   entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
   #   volumes:
   #     - odoo{VERSION}_{PROYECTO}_{ENTORNO}_data:/var/lib/odoo
+  #     - ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
   #     - ./projects/{PROYECTO}/odoo{VERSION}/{ENTORNO}/config/odoo.conf:/etc/odoo/odoo.conf:ro
   #     - ./projects/{PROYECTO}/odoo{VERSION}/{ENTORNO}/addons:/mnt/extra-addons
   #     - ./shared-addons/{VERSION}:/mnt/shared-addons:ro
@@ -134,7 +137,7 @@ services:
   #     - "127.0.0.1:{PUERTO_LP}:8072"
   #   networks:
   #     - odoo_net
-  #   command: ["odoo", "--config=/etc/odoo/odoo.conf", "--admin-passwd=${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}"]
+  #   command: ["odoo", "--config=/etc/odoo/odoo.conf"]
   #   mem_limit: 3g      # 2g para entornos dev
   #   cpus: 2.0          # 1.0 para entornos dev
 

@@ -184,6 +184,25 @@ Para automatizar el refresco de la copia, podés programar el Paso 3 en `cron`
 - **502 / Bad Gateway:** el contenedor de Odoo aún no terminó de arrancar.
   Esperá y revisá `./scripts/ops.sh logs odoo14_merida_prod 120`.
 
+- **`odoo: error: no such option: --admin-passwd` (crash loop):** el bloque del
+  servicio quedó con la sintaxis vieja. Odoo 14 no acepta `--admin-passwd` por
+  CLI: lo inyecta el wrapper `odoo-entrypoint.sh`. Asegurate de que el servicio
+  en `docker-compose.yml` tenga el wrapper y el command sin ese flag:
+
+  ```yaml
+      entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
+      volumes:
+        - ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
+        # ... (resto de volumes)
+      command: ["odoo", "--config=/etc/odoo/odoo.conf"]
+  ```
+
+  Luego recreá el contenedor:
+
+  ```bash
+  docker compose up -d --force-recreate odoo14_merida_prod
+  ```
+
 ---
 
 ## Resumen de comandos

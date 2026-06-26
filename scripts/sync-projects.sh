@@ -300,8 +300,8 @@ log_level   = ${LOG_LEVEL}
 log_handler = :WARNING,werkzeug:CRITICAL
 
 # list_db=False: oculta el listado de bases de datos en el gestor web.
-# admin_passwd NO se escribe acá (sería un secreto versionado); se inyecta por
-# línea de comandos vía --admin-passwd=\${ODOO_MASTER_PASSWD} desde docker-compose.
+# admin_passwd NO se escribe acá (sería un secreto versionado); lo inyecta el
+# wrapper odoo-entrypoint.sh en un config de runtime desde \${ODOO_MASTER_PASSWD}.
 list_db      = False
 
 max_cron_threads = ${CRON_THREADS}
@@ -331,8 +331,12 @@ ODOOCONF
       PORT: 5432
       USER: \${POSTGRES_USER:-odoo}
       PASSWORD: \${POSTGRES_PASSWORD}
+    # El wrapper inyecta admin_passwd (Odoo 14 no soporta --admin-passwd por CLI)
+    # e instala requirements.txt de shared-addons antes de arrancar.
+    entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
     volumes:
       - ${VOLUME_NAME}:/var/lib/odoo
+      - ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
       - ./projects/${PROYECTO}/odoo${VERSION}/${ENTORNO}/config/odoo.conf:/etc/odoo/odoo.conf:ro
       - ./projects/${PROYECTO}/odoo${VERSION}/${ENTORNO}/addons:/mnt/extra-addons
       - ./shared-addons/${VERSION}:/mnt/shared-addons:ro
@@ -343,7 +347,7 @@ ODOOCONF
       - "127.0.0.1:${PUERTO_LP}:8072"
     networks:
       - odoo_net
-    command: ["odoo", "--config=/etc/odoo/odoo.conf", "--admin-passwd=\${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}"]
+    command: ["odoo", "--config=/etc/odoo/odoo.conf"]
     # Límites de recursos: evitan que una instancia agote la RAM/CPU del host
     # y afecte al resto de proyectos del servidor compartido.
     mem_limit: ${MEM_LIMIT}
