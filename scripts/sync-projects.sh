@@ -30,22 +30,25 @@ WITH_SSL=false
 WITH_START=false
 WITH_VALIDATE=false
 WITH_STAGING=false
+WILDCARD_REUSE=true
 REGISTRY="projects-registry.conf"
 
 for arg in "$@"; do
     case "$arg" in
-        --apply)    APPLY=true ;;
-        --ssl)      WITH_SSL=true ;;
-        --start)    WITH_START=true ;;
-        --validate) WITH_VALIDATE=true ;;
-        --staging)  WITH_STAGING=true ;;
+        --apply)        APPLY=true ;;
+        --ssl)          WITH_SSL=true ;;
+        --start)        WITH_START=true ;;
+        --validate)     WITH_VALIDATE=true ;;
+        --staging)      WITH_STAGING=true ;;
+        --no-wildcard)  WILDCARD_REUSE=false ;;
         --help|-h)
-            echo "Uso: $0 [--apply] [--ssl] [--start] [--validate] [--staging]"
-            echo "  --apply     Aplica los cambios (sin este flag: dry-run)"
-            echo "  --ssl       Emite certificados SSL para los proyectos nuevos"
-            echo "  --start     Levanta los contenedores nuevos tras aplicar"
-            echo "  --validate  Verifica el estado de todos los proyectos registrados"
-            echo "  --staging   Usa el servidor de pruebas de Let's Encrypt (sin rate limits)"
+            echo "Uso: $0 [--apply] [--ssl] [--start] [--validate] [--staging] [--no-wildcard]"
+            echo "  --apply        Aplica los cambios (sin este flag: dry-run)"
+            echo "  --ssl          Emite certificados SSL para los proyectos nuevos"
+            echo "  --start        Levanta los contenedores nuevos tras aplicar"
+            echo "  --validate     Verifica el estado de todos los proyectos registrados"
+            echo "  --staging      Usa el servidor de pruebas de Let's Encrypt (sin rate limits)"
+            echo "  --no-wildcard  No reutilizar certs wildcard; emitir siempre cert individual"
             exit 0
             ;;
         *) warn "Argumento desconocido: $arg" ;;
@@ -218,7 +221,7 @@ while IFS=: read -r PROYECTO VERSION ENTORNO DOMINIO PUERTO_HTTP; do
         dryrun "Insertaría volumen en docker-compose.yml"
         dryrun "Insertaría upstream en nginx/conf.d/00-upstreams.conf"
         dryrun "Insertaría vhost en nginx/conf.d/vhosts-projects.conf"
-        $WITH_SSL  && dryrun "Emitiría certificado SSL para ${DOMINIO}"
+        $WITH_SSL  && dryrun "SSL para ${DOMINIO}: reutilizaría wildcard si lo cubre, si no emitiría cert individual"
         $WITH_START && dryrun "Levantaría contenedor ${CONTAINER_NAME}"
         echo ""
         continue
@@ -577,11 +580,33 @@ if $WITH_SSL; then
         [[ -z "${P_SSL// /}" ]] && continue
         D_SSL="${D_SSL// /}"
 
+        # Ya enlazado a un wildcard (live/<dominio> es symlink) → nada que hacer.
+        if [[ -L "./nginx/certbot/conf/live/${D_SSL}" ]]; then
+            info "${D_SSL}: ya usa un cert wildcard (symlink) — omitido."
+            local_skipped=$((local_skipped + 1))
+            continue
+        fi
+
         # Cert real = certbot gestiona el archive dir (distinto del auto-firmado en live/)
         if [[ -d "./nginx/certbot/conf/archive/${D_SSL}" ]]; then
             info "${D_SSL}: certificado Let's Encrypt activo — omitido."
             local_skipped=$((local_skipped + 1))
             continue
+        fi
+
+        # Reutilización de wildcard: si existe un cert *.<parent> en el volumen
+        # que cubre este subdominio, lo enlazamos en vez de emitir cert individual
+        # (ahorra rate-limits y la validación ACME http-01). --auto sale con 3 si
+        # no hay wildcard que cubra, y entonces seguimos con la emisión normal.
+        if $WILDCARD_REUSE; then
+            WC_RC=0
+            ./scripts/wildcard-ssl.sh "${D_SSL}" --link --no-reload --auto --quiet || WC_RC=$?
+            if [[ $WC_RC -eq 0 ]]; then
+                info "${D_SSL}: reutilizado cert wildcard (sin emitir cert individual)."
+                local_issued=$((local_issued + 1)); continue
+            elif [[ $WC_RC -ne 3 ]]; then
+                warn "${D_SSL}: fallo al reutilizar wildcard (código ${WC_RC}); intento emisión individual."
+            fi
         fi
 
         step "Verificando DNS para ${D_SSL}..."

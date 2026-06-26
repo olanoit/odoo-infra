@@ -73,6 +73,7 @@ odoo-multi-version/
 │   ├── sync-overrides.sh           ← regenera docker-compose.override.yml
 │   ├── delete-project.sh           ← borra un proyecto entero (con confirmación)
 │   ├── setup-ssl.sh                ← emite SSL inicial vía Certbot
+│   ├── wildcard-ssl.sh             ← reutiliza un cert wildcard para un subdominio
 │   ├── nginx-dedupe.sh             ← limpia bloques duplicados en confs de nginx
 │   ├── backup-cron.sh             ← backup-all + retención, para cron
 │   ├── clean-logs.sh              ← vacía los logs Docker de uno o todos los proyectos
@@ -148,6 +149,7 @@ odoo-multi-version/
 | `scripts/sync-overrides.sh`  | Genera o regenera el `docker-compose.override.yml` con los bloques por defecto (entrypoint wrapper, addons-path con `tools`, workers, memoria).         |
 | `scripts/delete-project.sh`  | Elimina un proyecto ENTERO (container, volumen, DB, backups, certs, bloques en conf). Pide confirmación tipeando `BORRAR <proyecto>_<entorno>`.          |
 | `scripts/setup-ssl.sh`       | Emisión inicial de certificados SSL vía Certbot (legado — `sync-projects.sh --ssl` lo reemplaza en flujos nuevos).                                       |
+| `scripts/wildcard-ssl.sh`    | Reutiliza un cert **wildcard** (`*.dominio`) para un subdominio en vez de emitir uno individual: symlink al wildcard local (renovación automática) o copia desde un origen externo. `sync-projects.sh --ssl` lo usa automáticamente cuando hay un wildcard que cubre el dominio. |
 | `scripts/nginx-dedupe.sh`    | Limpia bloques duplicados en `00-upstreams.conf` y `vhosts-projects.conf` (típico tras varias corridas de `sync-projects.sh` en escenarios de reset).    |
 | `scripts/odoo-entrypoint.sh` | Wrapper de arranque del container Odoo: instala `requirements.txt` de módulos en `shared-addons/` antes de pasarle el control al entrypoint oficial.    |
 | `scripts/backup-cron.sh`     | Backup automático no interactivo (`backup-all`) + retención configurable (`RETENTION_DAYS`). Pensado para `cron`. Ver [docs/05-backups.md](docs/05-backups.md).    |

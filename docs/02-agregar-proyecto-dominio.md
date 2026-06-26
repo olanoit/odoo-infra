@@ -377,6 +377,50 @@ curl -I https://micliente-sta.tudominio.com
 
 ---
 
+## SSL con certificado wildcard (reutilizar el de producción)
+
+Si ya tenés un certificado **wildcard** (`*.altalatam.com`), no hace falta emitir
+un cert nuevo por cada subdominio: el wildcard ya lo cubre. El script
+`wildcard-ssl.sh` puebla `live/<subdominio>/` reutilizando ese cert, y el vhost
+(que apunta a `live/<subdominio>/`) lo toma sin cambios.
+
+Hay dos modos:
+
+| Modo        | Cuándo                                                        | Renovación |
+|-------------|--------------------------------------------------------------|------------|
+| **symlink** | El wildcard ya vive en el volumen certbot de este servidor   | Automática (el subdominio sigue al wildcard) |
+| **copia**   | El wildcard está en otro servidor / backup / ruta del host   | Manual (re-copiar al renovar) |
+
+```bash
+# Symlink al wildcard local (autodetecta el lineage que cubre el subdominio):
+./scripts/wildcard-ssl.sh micliente.altalatam.com
+
+# Indicando explícitamente el lineage wildcard del volumen:
+./scripts/wildcard-ssl.sh micliente.altalatam.com --wildcard altalatam.com
+
+# Copia desde un directorio externo con fullchain.pem/privkey.pem/chain.pem:
+./scripts/wildcard-ssl.sh micliente.altalatam.com --from /ruta/al/wildcard
+
+# Copia indicando archivos sueltos:
+./scripts/wildcard-ssl.sh micliente.altalatam.com \
+    --fullchain /ruta/fullchain.pem --privkey /ruta/privkey.pem
+```
+
+> El script verifica que el SAN del cert realmente cubra el subdominio, opera el
+> filesystem de certs dentro del contenedor `certbot` (sin problemas de permisos)
+> y recarga nginx tras validar la config (`nginx -t`).
+
+**Integración automática con `sync-projects.sh`:** al correr `--ssl`, si existe un
+wildcard en el volumen que cubre el dominio, se reutiliza (symlink) en lugar de
+emitir un cert individual — ahorra rate-limits de Let's Encrypt y evita la
+validación ACME http-01. Para forzar la emisión individual aunque haya wildcard:
+
+```bash
+./scripts/sync-projects.sh --ssl --no-wildcard
+```
+
+---
+
 ## Troubleshooting SSL
 
 ### Síntoma: Certbot se cuelga indefinidamente al emitir un cert
