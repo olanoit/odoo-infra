@@ -59,44 +59,47 @@ find /mnt/shared-addons -maxdepth 2 -name requirements.txt 2>/dev/null | while r
     rm -rf "$tmp_dir"
 done
 
-# ── Inyectar el master password (admin_passwd) en un config de runtime ────────
-# Odoo NO acepta --admin-passwd por línea de comandos en todas las versiones
-# (Odoo 14 falla con "no such option: --admin-passwd"), y el secreto no se
-# versiona en el odoo.conf. Si ODOO_MASTER_PASSWD está definido, generamos un
-# config efectivo en el data_dir (escribible) con admin_passwd inyectado, y
-# reescribimos los argumentos para usarlo en lugar del odoo.conf montado :ro.
-if [ -n "${ODOO_MASTER_PASSWD:-}" ]; then
-    SRC_CONF=/etc/odoo/odoo.conf
-    RT_CONF=/var/lib/odoo/.odoo-runtime.conf
-    if [ -f "$SRC_CONF" ]; then
-        # Copiar el conf quitando cualquier admin_passwd previo, y anexar el real.
-        grep -v '^[[:space:]]*admin_passwd' "$SRC_CONF" > "$RT_CONF" 2>/dev/null || cp "$SRC_CONF" "$RT_CONF"
-    else
-        printf '[options]\n' > "$RT_CONF"
-    fi
-    printf 'admin_passwd = %s\n' "${ODOO_MASTER_PASSWD}" >> "$RT_CONF"
-
-    # Sanear el addons_path del conf (descartar dirs vacíos para Odoo 14).
-    if grep -q '^[[:space:]]*addons_path' "$RT_CONF"; then
-        _ap_cur=$(grep -m1 '^[[:space:]]*addons_path' "$RT_CONF" | sed 's/^[[:space:]]*addons_path[[:space:]]*=[[:space:]]*//')
-        _ap_san=$(_sanitize_addons_path "$_ap_cur")
-        grep -v '^[[:space:]]*addons_path' "$RT_CONF" > "${RT_CONF}.tmp" && mv "${RT_CONF}.tmp" "$RT_CONF"
-        printf 'addons_path = %s\n' "$_ap_san" >> "$RT_CONF"
-    fi
-    chmod 600 "$RT_CONF" 2>/dev/null || true
-
-    # Reescribir argumentos: quitar --admin-passwd=* (no soportado en Odoo 14),
-    # repuntar --config al config de runtime y sanear --addons-path=* (dirs vacíos).
-    for arg do
-        shift
-        case "$arg" in
-            --admin-passwd=*|--admin_passwd=*) continue ;;
-            --config=*|-c=*) set -- "$@" "--config=$RT_CONF" ;;
-            --addons-path=*) set -- "$@" "--addons-path=$(_sanitize_addons_path "${arg#--addons-path=}")" ;;
-            *) set -- "$@" "$arg" ;;
-        esac
-    done
+# ── Config de runtime: admin_passwd + addons-path saneado ─────────────────────
+# Generamos SIEMPRE un config efectivo en el data_dir (escribible), porque dos
+# cosas no dependen del master password y deben aplicarse igual:
+#   1. Sanear el addons-path (Odoo 14 rechaza dirs vacíos).
+#   2. Repuntar --config a este conf (el montado en /etc/odoo es :ro).
+# La inyección de admin_passwd solo ocurre si ODOO_MASTER_PASSWD está definido
+# (Odoo 14 no acepta --admin-passwd por CLI, y el secreto no se versiona).
+SRC_CONF=/etc/odoo/odoo.conf
+RT_CONF=/var/lib/odoo/.odoo-runtime.conf
+if [ -f "$SRC_CONF" ]; then
+    cp "$SRC_CONF" "$RT_CONF"
+else
+    printf '[options]\n' > "$RT_CONF"
 fi
+
+# Inyectar admin_passwd si está disponible (quitando cualquiera previo).
+if [ -n "${ODOO_MASTER_PASSWD:-}" ]; then
+    grep -v '^[[:space:]]*admin_passwd' "$RT_CONF" > "${RT_CONF}.tmp" && mv "${RT_CONF}.tmp" "$RT_CONF"
+    printf 'admin_passwd = %s\n' "${ODOO_MASTER_PASSWD}" >> "$RT_CONF"
+fi
+
+# Sanear el addons_path del conf (descartar dirs vacíos para Odoo 14).
+if grep -q '^[[:space:]]*addons_path' "$RT_CONF"; then
+    _ap_cur=$(grep -m1 '^[[:space:]]*addons_path' "$RT_CONF" | sed 's/^[[:space:]]*addons_path[[:space:]]*=[[:space:]]*//')
+    _ap_san=$(_sanitize_addons_path "$_ap_cur")
+    grep -v '^[[:space:]]*addons_path' "$RT_CONF" > "${RT_CONF}.tmp" && mv "${RT_CONF}.tmp" "$RT_CONF"
+    printf 'addons_path = %s\n' "$_ap_san" >> "$RT_CONF"
+fi
+chmod 600 "$RT_CONF" 2>/dev/null || true
+
+# Reescribir argumentos SIEMPRE: quitar --admin-passwd=* (no soportado en Odoo 14),
+# repuntar --config al config de runtime y sanear --addons-path=* (dirs vacíos).
+for arg do
+    shift
+    case "$arg" in
+        --admin-passwd=*|--admin_passwd=*) continue ;;
+        --config=*|-c=*) set -- "$@" "--config=$RT_CONF" ;;
+        --addons-path=*) set -- "$@" "--addons-path=$(_sanitize_addons_path "${arg#--addons-path=}")" ;;
+        *) set -- "$@" "$arg" ;;
+    esac
+done
 
 # Pasar control al entrypoint oficial de Odoo con todos los argumentos
 exec /entrypoint.sh "$@"
