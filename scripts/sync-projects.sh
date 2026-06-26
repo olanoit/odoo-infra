@@ -241,6 +241,17 @@ while IFS=: read -r PROYECTO VERSION ENTORNO DOMINIO PUERTO_HTTP; do
         SSL_CACHE_SIZE="5m"; MEM_LIMIT="2g"; CPUS="1.0"
     fi
 
+    # ── Opciones dependientes de la versión de Odoo ──────────────────────────
+    # Odoo 16+ usa gevent_port y opciones websocket_*; Odoo ≤15 usa
+    # longpolling_port y no tiene websockets.
+    if (( VERSION >= 16 )); then
+        LP_PORT_LINE="gevent_port    = 8072"
+        WS_BLOCK=$'\nwebsocket_keep_alive_timeout = 3600\nwebsocket_rate_limit_burst   = '"${WS_BURST}"$'\nwebsocket_rate_limit_delay   = '"${WS_DELAY}"
+    else
+        LP_PORT_LINE="longpolling_port = 8072"
+        WS_BLOCK=""
+    fi
+
     TMP=$(mktemp -d)
 
     # ── 1. Directorios ────────────────────────────────────────────────────────
@@ -270,7 +281,7 @@ data_dir    = /var/lib/odoo
 addons_path = /usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons,/mnt/extra-addons
 
 http_port      = 8069
-gevent_port    = 8072
+${LP_PORT_LINE}
 http_interface =
 proxy_mode     = True
 
@@ -292,10 +303,7 @@ list_db      = False
 
 max_cron_threads = ${CRON_THREADS}
 unaccent         = True
-
-websocket_keep_alive_timeout = 3600
-websocket_rate_limit_burst   = ${WS_BURST}
-websocket_rate_limit_delay   = ${WS_DELAY}
+${WS_BLOCK}
 ODOOCONF
     info "odoo.conf generado: $CONF_FILE"
 

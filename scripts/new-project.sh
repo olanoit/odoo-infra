@@ -74,6 +74,16 @@ else
     MEM_LIMIT="2g"; CPUS="1.0"
 fi
 
+# Opciones dependientes de la versión: Odoo 16+ usa gevent_port y websocket_*;
+# Odoo ≤15 usa longpolling_port y no tiene websockets.
+if (( VERSION >= 16 )); then
+    LP_PORT_LINE="gevent_port    = 8072"
+    WS_BLOCK=$'\nwebsocket_keep_alive_timeout = 3600\nwebsocket_rate_limit_burst   = 10\nwebsocket_rate_limit_delay   = 0.2'
+else
+    LP_PORT_LINE="longpolling_port = 8072"
+    WS_BLOCK=""
+fi
+
 cat > "$CONF_FILE" << EOF
 # =============================================================================
 # OLANOIT — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
@@ -98,7 +108,7 @@ data_dir    = /var/lib/odoo
 addons_path = /usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons,/mnt/extra-addons
 
 http_port      = 8069
-gevent_port    = 8072
+${LP_PORT_LINE}
 http_interface =
 proxy_mode     = True
 
@@ -120,10 +130,7 @@ list_db      = False
 
 max_cron_threads = 2
 unaccent         = True
-
-websocket_keep_alive_timeout = 3600
-websocket_rate_limit_burst   = 10
-websocket_rate_limit_delay   = 0.2
+${WS_BLOCK}
 EOF
 info "odoo.conf creado: $CONF_FILE"
 

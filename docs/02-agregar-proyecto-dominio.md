@@ -143,6 +143,7 @@ git clone -b 19.0 https://github.com/OLANOIT/al_l10n_pe_edi.git
 
 | Versión Odoo | Puerto HTTP host | Puerto LP host   | Convención HTTP         |
 |--------------|-----------------|------------------|-------------------------|
+| Odoo 14      | 14010–14099     | HTTP + 1         | 14010, 14020, 14030...  |
 | Odoo 17      | 17010–17099     | HTTP + 1         | 17010, 17020, 17030...  |
 | Odoo 18      | 18010–18099     | HTTP + 1         | 18010, 18020, 18030...  |
 | Odoo 19      | 19010–19099     | HTTP + 1         | 19010, 19020, 19030...  |

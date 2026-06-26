@@ -9,18 +9,21 @@
 #   Ejemplos: odoo18_micliente_dev | odoo19_otroproyecto_sta
 #
 # PUERTOS INTERNOS (solo accesibles vía Nginx, bindeados a 127.0.0.1):
-#   Odoo 17: 17010–17099   Odoo 18: 18010–18099   Odoo 19: 19010–19099
-#   Puerto longpolling = puerto_http + 1  (ej: 19010 → 19011)
+#   Odoo 14: 14010–14099   Odoo 17: 17010–17099
+#   Odoo 18: 18010–18099   Odoo 19: 19010–19099
+#   Puerto longpolling = puerto_http + 1  (ej: 14010 → 14011)
 # =============================================================================
 
 services:
 
   # ---------------------------------------------------------------------------
-  # BASE DE DATOS — PostgreSQL 16 compartida
+  # BASE DE DATOS — PostgreSQL 13 compartida (rama Odoo 14)
+  # Odoo 14 soporta oficialmente PostgreSQL ≤ 13; PG13 también es válido
+  # para Odoo 17-19, por eso se usa como base común en esta rama.
   # Prefijo de DB por proyecto: {proyecto}_{entorno}_*
   # ---------------------------------------------------------------------------
   db:
-    image: postgres:16-alpine
+    image: postgres:13-alpine
     container_name: odoo_postgres
     restart: unless-stopped
     environment:
