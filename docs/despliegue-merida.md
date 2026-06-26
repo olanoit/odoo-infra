@@ -331,10 +331,40 @@ Luego, en Odoo, reintentá **Activar** el módulo (Aplicaciones), o por CLI:
 ./scripts/ops.sh module odoo14_merida_prod merida_prod_principal wk_backup_restore install
 ```
 
-> **Ojo con el nombre del paquete:** el nombre que importa Python puede diferir del
-> nombre en `pip`. Acá el módulo Python es `crontab` pero el paquete a instalar es
-> **`python-crontab`**. Si dudás, probá `docker exec odoo14_merida_prod pip install --break-system-packages <paquete>`
-> a mano una vez para confirmar el nombre, y luego dejalo en el `requirements.txt`.
+### Verificar que la librería quedó instalada
+
+Confirmá que Python puede importarla (usá el nombre que se **importa**, no el de pip):
+
+```bash
+docker exec odoo14_merida_prod python3 -c "import crontab; print('OK')"
+```
+
+> **Ojo con el nombre del paquete:** el nombre que importa Python suele diferir del
+> de `pip`. Acá se importa `crontab` pero el paquete es **`python-crontab`**. Otros
+> típicos: `cv2` → `opencv-python`, `PIL` → `Pillow`, `dateutil` → `python-dateutil`.
+
+### Instalar/probar a mano (rápido, para confirmar el nombre)
+
+En la imagen `odoo:14.0` el comando es **`pip3`** (no `pip`), y su pip **no** soporta
+`--break-system-packages` (eso es de las imágenes 17/18/19). Por eso, a mano:
+
+```bash
+docker exec odoo14_merida_prod pip3 install <paquete>
+```
+
+> Esto es **temporal**: se pierde si recreás el contenedor. Para que persista,
+> dejá el paquete en un `requirements.txt` (el wrapper lo reinstala en cada
+> arranque, detectando `pip3`/`pip` y los flags correctos según la versión).
+
+### Troubleshooting
+
+- **`pip: not found` en el log de arranque** y el contenedor en restart loop:
+  era un wrapper viejo que asumía `pip`. Actualizá el repo (`git pull`) y recreá;
+  el wrapper actual detecta `pip3` y **no** tumba el contenedor si una dependencia
+  falla (solo deja un aviso `[startup] AVISO: ...`).
+- **El log no muestra `[startup] Instalando dependencias`:** el `requirements.txt`
+  no está donde el wrapper escanea. Debe estar en `shared-addons/14/<x>/`,
+  en `projects/.../addons/<x>/` o en `enterprise/odoo14/<x>/` (máx 2 niveles).
 
 ---
 

@@ -41,6 +41,73 @@ Ejemplo real con un proyecto:
 
 ---
 
+## Escribir en el volumen desde un módulo Odoo (backups custom)
+
+Si usás un módulo de backups dentro de Odoo (p. ej. `extendrix_backups`, tipo
+**Local**), podés guardar sus archivos en este mismo volumen: como `/backups`
+está montado en el contenedor Odoo, basta configurar la **ruta de destino** del
+módulo apuntando a una subcarpeta propia (para no mezclar con los backups de
+`ops.sh`):
+
+```
+/backups/merida/extendrix_backups
+```
+
+Lo que el módulo escriba ahí aparece en `./backups/merida/extendrix_backups/`
+del host.
+
+### Permisos (lo más importante)
+
+El contenedor Odoo corre como el usuario **`odoo` (uid 101)**, no root. Para que
+pueda escribir, hacen falta **dos** cosas en el host:
+
+1. La **raíz** `./backups` debe ser **atravesable** por `odoo` (permiso `x` para
+   "otros"); si solo chowneás el subdirectorio, igual falla con `Permission denied`
+   porque no puede entrar a la raíz.
+2. La **subcarpeta destino** debe pertenecer al uid `101`.
+
+```bash
+# 1. Hacer atravesable la raíz del volumen (sin cambiarle el dueño)
+sudo chmod o+rx /opt/odoo-infra/backups
+# 2. Crear la carpeta destino y asignarla al usuario odoo
+sudo mkdir -p /opt/odoo-infra/backups/merida/extendrix_backups
+sudo chown -R 101:101 /opt/odoo-infra/backups/merida
+```
+
+Verificá que el contenedor puede escribir:
+
+```bash
+docker exec odoo14_merida_prod sh -c 'touch /backups/merida/extendrix_backups/.test && echo ESCRIBE_OK && rm /backups/merida/extendrix_backups/.test'
+```
+
+Debe imprimir `ESCRIBE_OK`.
+
+### Si `/backups` no existe dentro del contenedor
+
+`docker exec ... mkdir /backups/...` falla con `cannot create directory '/backups'`
+→ el volumen **no está montado** en ese contenedor. Casi siempre es porque el
+`docker-compose.override.yml` define su propio `volumes:` y **pisa** la lista del
+base. Solución:
+
+```bash
+# Confirmar los montajes reales del contenedor
+docker inspect odoo14_merida_prod --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' | grep backups
+```
+
+- Si **no** aparece `/backups`: agregá `- ./backups:/backups` al bloque de
+  `volumes:` del servicio en `docker-compose.override.yml` y recreá **solo** ese
+  contenedor (no toca la DB ni el filestore, que viven en otros volúmenes):
+
+  ```bash
+  docker compose up -d --force-recreate odoo14_merida_prod
+  ```
+
+> **Nota:** un `os.makedirs(path)` en Python falla si la carpeta ya existe; usá
+> `os.makedirs(path, exist_ok=True)` en el módulo para evitar errores en corridas
+> sucesivas.
+
+---
+
 ## Crear un backup (DB + filestore) por terminal
 
 ```bash
