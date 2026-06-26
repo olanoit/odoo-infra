@@ -236,6 +236,53 @@ Notas:
 
 ---
 
+## Gestor de bases de datos `/web/database/manager` (opcional)
+
+**Por defecto está bloqueado** y así conviene dejarlo. El stack cierra el gestor
+de bases en **dos capas**:
+
+1. `list_db = False` en el `odoo.conf` → Odoo oculta el listado de bases.
+2. `location /web/database { return 404; }` en el vhost → nginx bloquea el endpoint.
+
+> ⚠️ **Riesgo de seguridad.** Exponer `/web/database/manager` permite a cualquiera
+> con el **master password** crear, borrar, hacer backup o **restaurar** todas las
+> bases del servidor. Por eso viene cerrado. Habilitalo solo si lo necesitás, con
+> un `ODOO_MASTER_PASSWD` fuerte, y **revertilo al terminar** (o restringilo por IP).
+
+### Habilitar (temporal)
+
+```bash
+cd /opt/odoo-infra
+# 1. Mostrar el listado de bases en Odoo
+sed -i 's/^list_db.*/list_db      = True/' projects/merida/odoo14/prod/config/odoo.conf
+# 2. Quitar el bloqueo de nginx (comenta el bloque /web/database)
+sed -i '/location \/web\/database {/,/}/ s/^/# /' nginx/conf.d/vhosts-projects.conf
+# 3. Reiniciar Odoo (el wrapper regenera el config de runtime con list_db = True)
+docker compose restart odoo14_merida_prod
+# 4. Validar y recargar nginx
+docker compose exec -T nginx nginx -t
+docker compose exec -T nginx nginx -s reload
+```
+
+Luego `https://merida2.odoo-rideco.mx/web/database/manager` muestra el gestor; pide
+el **Master Password** = el valor de `ODOO_MASTER_PASSWD` del `.env`.
+
+### Revertir (recomendado al terminar)
+
+```bash
+cd /opt/odoo-infra
+sed -i 's/^list_db.*/list_db      = False/' projects/merida/odoo14/prod/config/odoo.conf
+sed -i '/# *location \/web\/database {/,/# *}/ s/^# //' nginx/conf.d/vhosts-projects.conf
+docker compose restart odoo14_merida_prod
+docker compose exec -T nginx nginx -s reload
+```
+
+> **Nota:** estos cambios son **locales del server**. Si más adelante reaplicás el
+> proyecto con `sync-projects.sh`, el vhost y el `odoo.conf` se regeneran con el
+> bloqueo por defecto (el hardening vuelve), lo cual es lo deseable.
+
+---
+
 ## Troubleshooting
 
 - **`curl` muestra cert autofirmado / `nginx -t` falla:** el Paso 3 no corrió o
