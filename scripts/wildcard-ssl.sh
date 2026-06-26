@@ -229,6 +229,14 @@ if [[ -f "$VHOSTS" ]] && ! grep -q "live/${SUBDOMAIN}/" "$VHOSTS" 2>/dev/null; t
     warn "    ./scripts/sync-projects.sh --apply"
 fi
 
+# ── Validar que el fullchain destino sea un certificado legible ───────────────
+# Red de seguridad: si el origen vino corrupto/vacío, abortamos ANTES de tocar
+# nginx para no dejar la config rota (nginx no carga un fullchain inválido).
+if ! cb "openssl x509 -in '${LIVE}/${SUBDOMAIN}/fullchain.pem' -noout" >/dev/null 2>&1; then
+    error "El fullchain de ${SUBDOMAIN} no es un certificado legible (origen corrupto/vacío).
+       No toco nginx. Revisá el cert de origen y reintentá."
+fi
+
 # ── Recargar nginx ────────────────────────────────────────────────────────────
 if $RELOAD; then
     if docker compose ps --format '{{.Status}}' nginx 2>/dev/null | grep -qi '^up'; then
