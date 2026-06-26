@@ -1,16 +1,17 @@
 # =============================================================================
-# OLANOIT — Multi-Version Odoo Orchestration
+# EXTENDRIX — Orquestación Odoo 14
 #
 # Infraestructura base: PostgreSQL + Nginx + Certbot
 # Los servicios Odoo se agregan via sync-projects.sh o new-project.sh
+# Orientado a Odoo 14; la mecánica es version-aware y soporta otras versiones
+# compatibles (la convención usa {VERSION}).
 #
 # Convención de nombres de contenedores:
 #   odoo{VERSION}_{PROYECTO}_{ENTORNO}
-#   Ejemplos: odoo18_micliente_dev | odoo19_otroproyecto_sta
+#   Ejemplos: odoo14_merida_prod | odoo14_motomarket_sta
 #
 # PUERTOS INTERNOS (solo accesibles vía Nginx, bindeados a 127.0.0.1):
-#   Odoo 14: 14010–14099   Odoo 17: 17010–17099
-#   Odoo 18: 18010–18099   Odoo 19: 19010–19099
+#   Odoo 14: 14010–14099  (otras versiones compatibles: {ver}010–{ver}099)
 #   Puerto longpolling = puerto_http + 1  (ej: 14010 → 14011)
 # =============================================================================
 

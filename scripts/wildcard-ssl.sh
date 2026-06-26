@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — wildcard-ssl.sh
+# EXTENDRIX — wildcard-ssl.sh
 #
-# Reutiliza un certificado SSL *wildcard* (ej: *.altalatam.com) para un
+# Reutiliza un certificado SSL *wildcard* (ej: *.odoo-rideco.mx) para un
 # subdominio concreto, en lugar de emitir un certificado individual con
 # certbot. Como el wildcard ya cubre el subdominio, el cert es válido tal cual.
 #
@@ -20,16 +20,16 @@
 #
 # USO:
 #   # Symlink al wildcard local (autodetecta el lineage que cubre el subdominio):
-#   ./scripts/wildcard-ssl.sh micliente.altalatam.com
+#   ./scripts/wildcard-ssl.sh merida.odoo-rideco.mx
 #
 #   # Symlink indicando explícitamente el lineage wildcard:
-#   ./scripts/wildcard-ssl.sh micliente.altalatam.com --wildcard altalatam.com
+#   ./scripts/wildcard-ssl.sh merida.odoo-rideco.mx --wildcard odoo-rideco.mx
 #
 #   # Copia desde un directorio externo con fullchain.pem/privkey.pem/chain.pem:
-#   ./scripts/wildcard-ssl.sh micliente.altalatam.com --from /ruta/al/wildcard
+#   ./scripts/wildcard-ssl.sh merida.odoo-rideco.mx --from /ruta/al/wildcard
 #
 #   # Copia indicando archivos sueltos:
-#   ./scripts/wildcard-ssl.sh micliente.altalatam.com \
+#   ./scripts/wildcard-ssl.sh merida.odoo-rideco.mx \
 #       --fullchain /ruta/fullchain.pem --privkey /ruta/privkey.pem
 #
 # OPCIONES:
@@ -94,7 +94,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-[[ -z "$SUBDOMAIN" ]] && error "Falta el subdominio (ej: micliente.altalatam.com)"
+[[ -z "$SUBDOMAIN" ]] && error "Falta el subdominio (ej: merida.odoo-rideco.mx)"
 
 # Validación básica del subdominio
 [[ "$SUBDOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] || error "Subdominio inválido: $SUBDOMAIN"

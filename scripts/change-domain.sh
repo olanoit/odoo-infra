@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — change-domain.sh
+# EXTENDRIX — change-domain.sh
 # Cambia el dominio de un proyecto existente, o le agrega un dominio alias.
 #
 # USO:

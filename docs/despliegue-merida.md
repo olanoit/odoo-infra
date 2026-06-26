@@ -51,8 +51,8 @@ subdominio `merida.odoo-rideco.mx` sin necesidad de emitir un cert nuevo.
 
 ## Paso 1 — Registrar el proyecto
 
-Editá `projects-registry.conf` y agregá la línea de `merida`. Si todavía está la
-línea placeholder de ejemplo (`micliente:...`), quitala.
+El repo ya trae la línea de `merida` en `projects-registry.conf`. Verificá que
+esté presente (y ajustá el dominio/puerto si tu servidor lo requiere):
 
 ```text
 # Formato: PROYECTO:VERSION:ENTORNO:DOMINIO:PUERTO_HTTP
@@ -191,9 +191,10 @@ Para automatizar el refresco de la copia, podés programar el Paso 3 en `cron`
 ```bash
 cd /opt/odoo-infra
 
-# 1. Registrar (quita el placeholder de ejemplo si existe y agrega merida)
-sed -i '/^micliente:/d' projects-registry.conf
-echo 'merida:14:prod:merida.odoo-rideco.mx:14010' >> projects-registry.conf
+# 1. Registrar (la línea de merida ya viene en projects-registry.conf;
+#    verificá que esté presente)
+grep -q '^merida:14:prod:' projects-registry.conf \
+  || echo 'merida:14:prod:merida.odoo-rideco.mx:14010' >> projects-registry.conf
 
 # 2. Aplicar + levantar
 ./scripts/sync-projects.sh --apply --start

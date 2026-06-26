@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — sync-overrides.sh
+# EXTENDRIX — sync-overrides.sh
 # Sincroniza docker-compose.override.yml con projects-registry.conf.
 #
 # Para cada proyecto del registry que NO tenga aún su entrada en
 # docker-compose.override.yml, agrega un bloque por defecto con:
 #   • entrypoint wrapper que instala requirements.txt de shared-addons
-#   • addons-path incluyendo OLANOIT_extra_addons/tools
+#   • addons-path incluyendo EXTENDRIX_extra_addons/tools
 #   • workers/limites estándar (4 / 2GB-2.5GB)
 #
 # USO:
@@ -75,7 +75,7 @@ ensure_override_file() {
     if [[ ! -f "$OVERRIDE_FILE" ]]; then
         cat > "$OVERRIDE_FILE" <<HEADER
 # =============================================================================
-# OLANOIT — docker-compose.override.yml
+# EXTENDRIX — docker-compose.override.yml
 # Override específico de este servidor — NO commitear al repo.
 #
 # Cada bloque se genera por sync-overrides.sh con valores por defecto.
@@ -152,7 +152,7 @@ ${key_indent}command:
 ${item_indent}- odoo
 ${item_indent}- --config=/etc/odoo/odoo.conf
 ${item_indent}- --admin-passwd=\${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}
-${item_indent}- --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/OLANOIT_extra_addons/tools,/mnt/extra-addons
+${item_indent}- --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/EXTENDRIX_extra_addons/tools,/mnt/extra-addons
 ${item_indent}- --db-filter=^${project}_${entorno}_.*\$
 ${item_indent}- --workers=2
 ${item_indent}- --max-cron-threads=1

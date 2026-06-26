@@ -34,7 +34,7 @@ docker compose version      # debe ser >= 2.x
 ## Paso 2 — Clonar el proyecto al servidor
 
 ```bash
-git clone https://github.com/OLANOIT-Ecommmerce-Services/odoo-multi-version.git /opt/odoo-infra
+git clone https://github.com/Extendrix-Ecommmerce-Services/odoo-multi-version.git /opt/odoo-infra
 cd /opt/odoo-infra
 
 chmod +x scripts/*.sh
@@ -54,10 +54,10 @@ Contenido mínimo requerido en `.env`:
 ```dotenv
 POSTGRES_PASSWORD=TuContraseñaSegura2024!
 ODOO_MASTER_PASSWD=OtraClaveFuerteDistinta2024!
-CERTBOT_EMAIL=admin@tudominio.com
+CERTBOT_EMAIL=support@extendrix.com
 
 # Una variable DOMAIN_ por cada instancia
-DOMAIN_MICLIENTE_STA=micliente-sta.tudominio.com
+DOMAIN_MERIDA_STA=merida-sta.odoo-rideco.mx
 ```
 
 > **`ODOO_MASTER_PASSWD` es obligatoria.** Es la *master password* de Odoo
@@ -82,7 +82,7 @@ nano projects-registry.conf
 Agregar una línea con el formato `PROYECTO:VERSION:ENTORNO:DOMINIO:PUERTO`:
 
 ```
-micliente:19:sta:micliente-sta.tudominio.com:19020
+merida:14:sta:merida-sta.odoo-rideco.mx:14020
 ```
 
 Aplicar (genera directorios, odoo.conf, docker-compose, nginx):
@@ -104,7 +104,7 @@ Ver detalles completos en [02-agregar-proyecto-dominio.md](02-agregar-proyecto-d
 curl -s https://api.ipify.org
 
 # Verificar que cada dominio resuelve a esa IP
-dig +short micliente-sta.tudominio.com
+dig +short merida-sta.odoo-rideco.mx
 ```
 
 Si el dominio usa un CNAME intermedio es válido — lo importante es que el último registro A apunte al servidor.
@@ -140,13 +140,13 @@ Este archivo permite personalizar recursos y addons por servidor sin tocar git:
 ```yaml
 # docker-compose.override.yml — específico de este servidor, NO commitear
 services:
-  odoo19_micliente_sta:
+  odoo14_merida_sta:
     command: >
       odoo --config=/etc/odoo/odoo.conf
       --workers=4
       --limit-memory-soft=2147483648
       --limit-memory-hard=2684354560
-      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/OLANOIT_extra_addons/tools,/mnt/extra-addons
+      --addons-path=/usr/lib/python3/dist-packages/odoo/addons,/mnt/enterprise,/mnt/shared-addons/EXTENDRIX_extra_addons/tools,/mnt/extra-addons
 ```
 
 Ver perfiles de recursos y guía completa en [07-configuracion-por-servidor.md](07-configuracion-por-servidor.md).
@@ -181,7 +181,7 @@ Acceder en el navegador a cada dominio registrado. Verás el selector de base de
 
 1. Ir a `https://<tu-dominio>/web/database/manager`
 2. Clic en **"Create Database"**
-3. Usar el nombre con el prefijo del entorno (ej: `micliente_sta_principal`)
+3. Usar el nombre con el prefijo del entorno (ej: `merida_sta_principal`)
 4. Ingresar la Master Password definida en `.env` (`ODOO_MASTER_PASSWD`)
 5. Elegir país, idioma y demo data (desactivar en staging/producción)
 
@@ -192,17 +192,15 @@ Acceder en el navegador a cada dominio registrado. Verás el selector de base de
 ```
 /opt/odoo-infra/
 ├── shared-addons/          ← módulos compartidos, por VERSIÓN de Odoo
-│   ├── 18/                 ← módulos para todos los proyectos Odoo 18
-│   │   └── al_l10n_pe_edi/
-│   └── 19/                 ← módulos para todos los proyectos Odoo 19
+│   └── 14/                 ← módulos para todos los proyectos Odoo 14
 │       └── al_l10n_pe_edi/
 ├── enterprise/
-│   └── odoo19/             ← addons enterprise de Odoo 19 (si aplica)
+│   └── odoo14/             ← addons enterprise de Odoo 14 (si aplica)
 ├── backups/                ← volumen central de backups (DB + filestore, gitignored)
 │   └── <proyecto>/{db,filestore}/
 ├── projects/
-│   └── micliente/
-│       └── odoo19/
+│   └── merida/
+│       └── odoo14/
 │           └── sta/
 │               └── addons/ ← addons EXCLUSIVOS de este proyecto staging
 └── nginx/certbot/conf/     ← certificados SSL (gestionados por Certbot)
@@ -235,7 +233,7 @@ docker compose restart nginx
 sudo ufw allow 80 && sudo ufw allow 443
 
 # 2. Verificar que el DNS resuelve al servidor (incluyendo CNAMEs)
-dig +short micliente-sta.tudominio.com
+dig +short merida-sta.odoo-rideco.mx
 
 # 3. Verificar que nginx está corriendo
 docker compose ps nginx
@@ -254,9 +252,9 @@ docker compose run --rm --entrypoint sh certbot -c \
 **502 Bad Gateway después de SSL exitoso:**
 ```bash
 # Odoo puede estar aún iniciando (esperar ~1 min) o tener http_interface mal configurado
-docker logs odoo19_micliente_sta --tail 20
+docker logs odoo14_merida_sta --tail 20
 # Verificar en odoo.conf que http_interface está vacío (no 127.0.0.1)
-grep http_interface projects/micliente/odoo19/sta/config/odoo.conf
+grep http_interface projects/merida/odoo14/sta/config/odoo.conf
 ```
 
 **"Too many connections" en PostgreSQL:**

@@ -33,29 +33,29 @@ El script `ops.sh` incluye el comando `module` para hacer todo en un solo paso:
 
 # ─── Actualizar un módulo ──────────────────────────────────────────────────
 ./scripts/ops.sh module \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_principal \
+  odoo14_merida_sta \
+  merida_sta_principal \
   account \
   update
 
 # ─── Instalar un módulo nuevo ─────────────────────────────────────────────
 ./scripts/ops.sh module \
-  odoo19_ml19_sta \
-  ml19_sta_principal \
-  OLANOIT_mi_modulo \
+  odoo14_merida_sta \
+  merida_sta_principal \
+  EXTENDRIX_mi_modulo \
   install
 
 # ─── Actualizar múltiples módulos a la vez ────────────────────────────────
 ./scripts/ops.sh module \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_principal \
+  odoo14_merida_sta \
+  merida_sta_principal \
   "account,stock" \
   update
 
 # ─── Actualizar TODOS los módulos instalados (usar con cuidado) ───────────
 ./scripts/ops.sh module \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_principal \
+  odoo14_merida_sta \
+  merida_sta_principal \
   all \
   update
 ```
@@ -75,9 +75,9 @@ docker exec -it <contenedor> odoo \
   --stop-after-init
 
 # Ejemplo real:
-docker exec -it odoo18_farmaniacos_sta odoo \
+docker exec -it odoo14_merida_sta odoo \
   --config=/etc/odoo/odoo.conf \
-  --database=farmaniacos_sta_principal \
+  --database=merida_sta_principal \
   --update=account \
   --stop-after-init
 ```
@@ -104,22 +104,22 @@ docker exec -it odoo18_farmaniacos_sta odoo \
 
 ```bash
 # 1. Editar el archivo Python en tu máquina de desarrollo
-nano projects/farmaniacos/odoo18/sta/addons/account/models/mi_modelo.py
+nano projects/merida/odoo14/sta/addons/account/models/mi_modelo.py
 
 # 2. El contenedor ya ve el cambio porque el volumen es live.
 #    No necesitas copiar nada.
 
 # 3. Aplicar el cambio (agrega la columna en PostgreSQL)
 ./scripts/ops.sh module \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_principal \
+  odoo14_merida_sta \
+  merida_sta_principal \
   account \
   update
 
 # 4. Verificar que la columna fue creada en la DB
 ./scripts/ops.sh db-query \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_principal \
+  odoo14_merida_sta \
+  merida_sta_principal \
   "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'mi_tabla' ORDER BY ordinal_position;"
 ```
 
@@ -129,13 +129,13 @@ nano projects/farmaniacos/odoo18/sta/addons/account/models/mi_modelo.py
 
 ```bash
 # 1. Crear la carpeta del módulo
-mkdir -p projects/farmaniacos/odoo18/sta/addons/OLANOIT_nuevo_modulo
+mkdir -p projects/merida/odoo14/sta/addons/EXTENDRIX_nuevo_modulo
 
 # 2. Crear __manifest__.py y __init__.py mínimos
-cat > projects/farmaniacos/odoo18/sta/addons/OLANOIT_nuevo_modulo/__manifest__.py << 'EOF'
+cat > projects/merida/odoo14/sta/addons/EXTENDRIX_nuevo_modulo/__manifest__.py << 'EOF'
 {
-    'name': 'OLANOIT - Nuevo Módulo',
-    'version': '19.0.1.0.0',
+    'name': 'EXTENDRIX - Nuevo Módulo',
+    'version': '14.0.1.0.0',
     'category': 'Customizations',
     'depends': ['base'],
     'installable': True,
@@ -143,23 +143,23 @@ cat > projects/farmaniacos/odoo18/sta/addons/OLANOIT_nuevo_modulo/__manifest__.p
 }
 EOF
 
-cat > projects/farmaniacos/odoo18/sta/addons/OLANOIT_nuevo_modulo/__init__.py << 'EOF'
+cat > projects/merida/odoo14/sta/addons/EXTENDRIX_nuevo_modulo/__init__.py << 'EOF'
 # -*- coding: utf-8 -*-
 EOF
 
 # 3. Actualizar lista de módulos disponibles en Odoo
 #    (esto no instala, solo refresca la lista)
-docker exec -it odoo18_farmaniacos_sta odoo \
+docker exec -it odoo14_merida_sta odoo \
   --config=/etc/odoo/odoo.conf \
-  --database=farmaniacos_sta_principal \
+  --database=merida_sta_principal \
   --update=base \
   --stop-after-init
 
 # 4. Instalar el nuevo módulo
 ./scripts/ops.sh module \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_principal \
-  OLANOIT_nuevo_modulo \
+  odoo14_merida_sta \
+  merida_sta_principal \
+  EXTENDRIX_nuevo_modulo \
   install
 ```
 
@@ -169,15 +169,15 @@ docker exec -it odoo18_farmaniacos_sta odoo \
 
 ```bash
 # Reiniciar sin borrar datos (el más común)
-docker compose restart odoo18_farmaniacos_sta
+docker compose restart odoo14_merida_sta
 
 # Detener y volver a levantar (más "limpio")
-docker compose stop odoo18_farmaniacos_sta
-docker compose start odoo18_farmaniacos_sta
+docker compose stop odoo14_merida_sta
+docker compose start odoo14_merida_sta
 
 # Ver si levantó bien
-docker compose ps odoo18_farmaniacos_sta
-./scripts/ops.sh logs odoo18_farmaniacos_sta 30
+docker compose ps odoo14_merida_sta
+./scripts/ops.sh logs odoo14_merida_sta 30
 ```
 
 ---
@@ -186,14 +186,14 @@ docker compose ps odoo18_farmaniacos_sta
 
 ```bash
 # En una terminal: aplicar el update
-./scripts/ops.sh module odoo18_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
+./scripts/ops.sh module odoo14_merida_sta merida_sta_principal mi_modulo update
 
 # En otra terminal: ver los logs en tiempo real
-./scripts/ops.sh logs odoo18_farmaniacos_sta 0
+./scripts/ops.sh logs odoo14_merida_sta 0
 # (0 = sin límite de líneas, solo lo nuevo)
 
 # Filtrar solo los errores:
-docker logs -f odoo18_farmaniacos_sta 2>&1 | grep -E "ERROR|WARNING|Traceback"
+docker logs -f odoo14_merida_sta 2>&1 | grep -E "ERROR|WARNING|Traceback"
 ```
 
 ---
@@ -207,37 +207,37 @@ Cuando los cambios en JS/OWL no se reflejan en el navegador:
 # Ajustes → Técnico → Interfaz de Usuario → Assets → Limpiar caché
 
 # Opción 2 — vía URL (modo debug activo)
-# https://farmaniacos-sta.altalatam.com/web?debug=1
+# https://merida-sta.odoo-rideco.mx/web?debug=1
 # Luego: Ajustes → Menú debug → "Regenerar activos del navegador"
 
 # Opción 3 — borrar assets de la DB directamente
 ./scripts/ops.sh db-query \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_principal \
+  odoo14_merida_sta \
+  merida_sta_principal \
   "DELETE FROM ir_attachment WHERE url LIKE '/web/assets/%';"
 
 # Después reiniciar Odoo
-docker compose restart odoo18_farmaniacos_sta
+docker compose restart odoo14_merida_sta
 ```
 
 ---
 
 ## Errores comunes al actualizar módulos
 
-**`Module not found: OLANOIT_mi_modulo`**
+**`Module not found: EXTENDRIX_mi_modulo`**
 ```bash
 # El módulo no está en el addons_path
 # Verificar que la carpeta existe y tiene __manifest__.py
-ls projects/farmaniacos/odoo18/sta/addons/
-docker exec odoo18_farmaniacos_sta ls /mnt/extra-addons/
+ls projects/merida/odoo14/sta/addons/
+docker exec odoo14_merida_sta ls /mnt/extra-addons/
 ```
 
 **`Cannot install module: depends on X which is not installed`**
 ```bash
 # Instalar primero la dependencia
-./scripts/ops.sh module odoo18_farmaniacos_sta farmaniacos_sta_principal modulo_dependencia install
+./scripts/ops.sh module odoo14_merida_sta merida_sta_principal modulo_dependencia install
 # Luego tu módulo
-./scripts/ops.sh module odoo18_farmaniacos_sta farmaniacos_sta_principal mi_modulo install
+./scripts/ops.sh module odoo14_merida_sta merida_sta_principal mi_modulo install
 ```
 
 **`column "mi_campo" of relation "mi_tabla" already exists`**
@@ -245,7 +245,7 @@ docker exec odoo18_farmaniacos_sta ls /mnt/extra-addons/
 # PostgreSQL ya tiene esa columna pero Odoo no sabe (estado inconsistente).
 # Opciones:
 # 1. Borrar la columna manualmente y re-aplicar el update
-./scripts/ops.sh db-query odoo18_farmaniacos_sta farmaniacos_sta_principal \
+./scripts/ops.sh db-query odoo14_merida_sta merida_sta_principal \
   "ALTER TABLE mi_tabla DROP COLUMN IF EXISTS mi_campo;"
 # 2. Hacer el campo nullable si el tipo cambió
 ```
@@ -253,7 +253,7 @@ docker exec odoo18_farmaniacos_sta ls /mnt/extra-addons/
 **`TransactionRollbackError` o `deadlock detected`**
 ```bash
 # Hay una transacción abierta en la DB. Cerrar conexiones activas:
-./scripts/ops.sh db-query odoo18_farmaniacos_sta farmaniacos_sta_principal \
-  "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='farmaniacos_sta_principal' AND pid <> pg_backend_pid();"
+./scripts/ops.sh db-query odoo14_merida_sta merida_sta_principal \
+  "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='merida_sta_principal' AND pid <> pg_backend_pid();"
 # Luego reintentar el update
 ```

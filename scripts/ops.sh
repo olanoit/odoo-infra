@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — ops.sh | Script central de operaciones
+# EXTENDRIX — ops.sh | Script central de operaciones
 # Uso: ./scripts/ops.sh <comando> [opciones]
 # Ver ayuda: ./scripts/ops.sh help
 # =============================================================================
@@ -1017,7 +1017,7 @@ cmd_ssl_renew() {
 # =============================================================================
 cmd_help() {
     echo ""
-    echo -e "${BOLD}OLANOIT — ops.sh | Gestión de entorno Odoo multi-versión${NC}"
+    echo -e "${BOLD}EXTENDRIX — ops.sh | Gestión de entorno Odoo 14${NC}"
     echo ""
     echo -e "${CYAN}Comandos disponibles:${NC}"
     echo ""
@@ -1044,16 +1044,16 @@ cmd_help() {
     echo ""
     echo -e "${CYAN}Ejemplos:${NC}"
     echo "  ./scripts/ops.sh start"
-    echo "  ./scripts/ops.sh logs odoo18_farmaniacos_sta 500"
-    echo "  ./scripts/ops.sh module odoo18_farmaniacos_sta farmaniacos_sta_principal mi_modulo update"
-    echo "  ./scripts/ops.sh backup farmaniacos odoo18_farmaniacos_sta farmaniacos_sta_principal"
-    echo "  ./scripts/ops.sh list-backups farmaniacos"
-    echo "  ./scripts/ops.sh restore odoo18_farmaniacos_sta farmaniacos_sta_copia \\"
-    echo "      farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz"
-    echo "  ./scripts/ops.sh restore-external odoo18_reycar_sta reycar_sta_principal \\"
+    echo "  ./scripts/ops.sh logs odoo14_merida_prod 500"
+    echo "  ./scripts/ops.sh module odoo14_merida_prod merida_prod_principal mi_modulo update"
+    echo "  ./scripts/ops.sh backup merida odoo14_merida_prod merida_prod_principal"
+    echo "  ./scripts/ops.sh list-backups merida"
+    echo "  ./scripts/ops.sh restore odoo14_merida_prod merida_prod_copia \\"
+    echo "      merida/db/20260511_020000_merida_prod_principal.sql.gz"
+    echo "  ./scripts/ops.sh restore-external odoo14_merida_prod merida_prod_principal \\"
     echo "      /opt/backups_odoo/conexion_prod_FULL_2026-05-12.tar.gz"
-    echo "  ./scripts/ops.sh neutralize odoo18_reycar_sta reycar_sta_principal"
-    echo "  ./scripts/ops.sh db-query odoo18_farmaniacos_sta farmaniacos_sta_principal \"SELECT count(*) FROM res_users;\""
+    echo "  ./scripts/ops.sh neutralize odoo14_merida_prod merida_prod_principal"
+    echo "  ./scripts/ops.sh db-query odoo14_merida_prod merida_prod_principal \"SELECT count(*) FROM res_users;\""
     echo ""
 }
 

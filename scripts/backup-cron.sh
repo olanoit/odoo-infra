@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — backup-cron.sh
+# EXTENDRIX — backup-cron.sh
 # Backup automático no interactivo de TODAS las bases de datos + retención.
 # Pensado para ejecutarse desde cron (ver más abajo).
 #
@@ -38,7 +38,7 @@ LOG_FILE="$LOG_DIR/backup-$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "═══════════════════════════════════════════════════════════════"
-echo "OLANOIT backup-cron — $(date '+%Y-%m-%d %H:%M:%S')"
+echo "EXTENDRIX backup-cron — $(date '+%Y-%m-%d %H:%M:%S')"
 echo "  Repo            : $PROJECT_DIR"
 echo "  Retención (días): $RETENTION_DAYS"
 echo "═══════════════════════════════════════════════════════════════"

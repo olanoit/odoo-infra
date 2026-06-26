@@ -208,7 +208,7 @@ celerybeat.pid
 docker-compose.override.yml
 
 # Contenido de addons externos (gestionados con sus propios repos).
-# shared-addons se organiza por versión (shared-addons/18/, /19/, etc.).
+# shared-addons se organiza por versión (shared-addons/14/, etc.).
 # Bloqueamos los addons reales pero mantenemos los .gitkeep que marcan
 # la estructura por versión.
 shared-addons/*

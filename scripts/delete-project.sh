@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — delete-project.sh
+# EXTENDRIX — delete-project.sh
 # Detiene y elimina por completo un proyecto staging.
 #
 # USO:

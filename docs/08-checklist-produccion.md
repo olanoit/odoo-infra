@@ -41,7 +41,7 @@ Esta guía complementa a [07-configuracion-por-servidor.md](07-configuracion-por
       [07-configuracion-por-servidor.md](07-configuracion-por-servidor.md)) y
       tuning de PostgreSQL (`shared_buffers`, `effective_cache_size`) acorde a la RAM.
 - [ ] **Firewall del host**: solo 80/443 (y SSH restringido) abiertos a internet.
-      Los puertos `19010+`/`8069` nunca deben ser accesibles desde fuera.
+      Los puertos `14010+`/`8069` nunca deben ser accesibles desde fuera.
 - [ ] **DNS** de cada dominio apunta al servidor antes de emitir SSL.
 - [ ] **Monitoreo/alertas** (uptime, disco, RAM) y revisión periódica de logs.
 - [ ] **Actualizaciones**: plan para parchear imágenes (`ops.sh update-image`) y

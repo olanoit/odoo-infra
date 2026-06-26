@@ -1,19 +1,23 @@
-# OLANOIT — Odoo Multi-Version Orchestration
+# EXTENDRIX — Orquestación Odoo 14
 
-Orquestador multi-versión de Odoo (17/18/19) sobre Docker: PostgreSQL + Nginx +
-Certbot, con un contenedor Odoo por proyecto y entorno.
+Orquestador de Odoo **14** sobre Docker: PostgreSQL + Nginx + Certbot, con un
+contenedor Odoo por proyecto y entorno. La mecánica es **version-aware**, por lo
+que también funciona con otras versiones compatibles de Odoo (la convención de
+puertos y rutas usa `{VERSION}`), pero este repo está orientado y validado para
+**Odoo 14**; todos los ejemplos lo usan.
 
 **Sin proyectos por defecto.** El repo viene limpio: vos decidís qué desplegar.
 Agregá tus proyectos en `projects-registry.conf` y ejecutá
 `./scripts/sync-projects.sh --apply`. Los ejemplos de esta documentación usan
-`farmaniacos` (Odoo 18) **solo como ilustración**.
+`merida` (Odoo 14) **solo como ilustración** — ver
+[docs/despliegue-merida.md](docs/despliegue-merida.md).
 
 | Convención    | Formato                              | Ejemplo                         |
 |---------------|--------------------------------------|---------------------------------|
-| Contenedor    | `odoo{VERSION}_{PROYECTO}_{ENTORNO}` | `odoo18_farmaniacos_sta`        |
-| Base de datos | `{proyecto}_{entorno}_*`             | `farmaniacos_sta_principal`     |
-| Subdominio    | `{proyecto}-{entorno}.<dominio>`     | `farmaniacos-sta.altalatam.com` |
-| Puertos host  | `{ver}010..{ver}099` (HTTP) + 1 LP   | `18020/18021`                   |
+| Contenedor    | `odoo{VERSION}_{PROYECTO}_{ENTORNO}` | `odoo14_merida_prod`            |
+| Base de datos | `{proyecto}_{entorno}_*`             | `merida_prod_principal`         |
+| Subdominio    | `{proyecto}[-{entorno}].<dominio>`   | `merida.odoo-rideco.mx`         |
+| Puertos host  | `{ver}010..{ver}099` (HTTP) + 1 LP   | `14010/14011`                   |
 
 ---
 
@@ -43,12 +47,10 @@ odoo-multi-version/
 │       └── addons/                 ← módulos EXCLUSIVOS del proyecto
 │
 ├── shared-addons/                  ← módulos compartidos entre proyectos, por versión
-│   ├── 18/                         ← addons para todos los Odoo 18
-│   └── 19/                         ← addons para todos los Odoo 19
+│   └── 14/                         ← addons para todos los Odoo 14
 │
 ├── enterprise/                     ← addons Odoo Enterprise, separados por versión
-│   ├── odoo18/
-│   └── odoo19/
+│   └── odoo14/
 │
 ├── backups/                        ← (gitignored) backups DB + filestore de todos los proyectos
 │   └── {proyecto}/
@@ -87,7 +89,8 @@ odoo-multi-version/
     ├── 05-backups.md
     ├── 06-operaciones-cheatsheet.md
     ├── 07-configuracion-por-servidor.md
-    └── 08-checklist-produccion.md
+    ├── 08-checklist-produccion.md
+    └── despliegue-merida.md         ← despliegue de merida (Odoo 14 + SSL wildcard)
 ```
 
 ---
@@ -183,12 +186,13 @@ chmod +x scripts/*.sh
 
 # 3. Registrar tu primer proyecto (formato proyecto:version:entorno:dominio:puerto)
 nano projects-registry.conf
-#   ej: farmaniacos:18:sta:farmaniacos-sta.altalatam.com:18020
+#   ej: merida:14:prod:merida.odoo-rideco.mx:14010
 
 # 4. Aplicar: genera el servicio, nginx y odoo.conf, y levanta el contenedor
 ./scripts/sync-projects.sh --apply --start
 
-# 5. Emitir SSL (cuando el DNS del dominio ya apunte a este servidor)
+# 5. SSL: si hay un wildcard que cubre el dominio, sync lo reutiliza solo;
+#    si no, emite cert individual (cuando el DNS ya apunte a este servidor)
 ./scripts/sync-projects.sh --ssl
 
 # 6. Estado
@@ -201,39 +205,39 @@ nano projects-registry.conf
 
 ```bash
 ./scripts/ops.sh health
-./scripts/ops.sh logs odoo18_farmaniacos_sta 200
-./scripts/ops.sh restart odoo18_farmaniacos_sta
+./scripts/ops.sh logs odoo14_merida_prod 200
+./scripts/ops.sh restart odoo14_merida_prod
 
-# Actualizar un módulo en una DB de staging
-./scripts/ops.sh module odoo18_farmaniacos_sta farmaniacos_sta_principal mi_modulo update
+# Actualizar un módulo
+./scripts/ops.sh module odoo14_merida_prod merida_prod_principal mi_modulo update
 
-# Backup (DB + filestore → ./backups/farmaniacos/)
-./scripts/ops.sh backup farmaniacos odoo18_farmaniacos_sta farmaniacos_sta_principal
+# Backup (DB + filestore → ./backups/merida/)
+./scripts/ops.sh backup merida odoo14_merida_prod merida_prod_principal
 
 # Listar backups disponibles
-./scripts/ops.sh list-backups farmaniacos
+./scripts/ops.sh list-backups merida
 
 # Restaurar (auto-detecta filestore por timestamp)
-./scripts/ops.sh restore odoo18_farmaniacos_sta farmaniacos_sta_copia \
-  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
+./scripts/ops.sh restore odoo14_merida_prod merida_prod_copia \
+  merida/db/20260511_020000_merida_prod_principal.sql.gz
 
 # Restaurar un backup que viene de otro servidor (.tar.gz / .zip / .sql.gz)
-./scripts/ops.sh restore-external odoo18_reycar_sta reycar_sta_principal \
+./scripts/ops.sh restore-external odoo14_merida_prod merida_prod_principal \
   /opt/backups_odoo/conexion_prod_FULL_2026-05-12.tar.gz
 
 # Neutralizar una DB recién importada de producción (apaga cron, mail, pagos…)
-./scripts/ops.sh neutralize odoo18_reycar_sta reycar_sta_principal
+./scripts/ops.sh neutralize odoo14_merida_prod merida_prod_principal
 
-# Nuevo proyecto staging
-./scripts/new-project.sh clientenuevo 19 sta 19030
+# Nuevo proyecto (ej: staging de merida)
+./scripts/new-project.sh merida 14 sta 14020
 
 # Sincronizar overrides (agrega bloque por defecto a proyectos que no lo tienen)
 ./scripts/sync-overrides.sh                  # dry-run
 ./scripts/sync-overrides.sh --apply          # aplicar a todos los faltantes
 
-# Eliminar un proyecto staging (pide confirmación, IRREVERSIBLE)
-./scripts/delete-project.sh clientenuevo sta --dry-run    # previsualizar
-./scripts/delete-project.sh clientenuevo sta              # aplicar
+# Eliminar un proyecto (pide confirmación, IRREVERSIBLE)
+./scripts/delete-project.sh merida sta --dry-run    # previsualizar
+./scripts/delete-project.sh merida sta              # aplicar
 ```
 
 ---
@@ -249,3 +253,5 @@ nano projects-registry.conf
 | [05 - Backups](docs/05-backups.md) | Backup y restore (DB + filestore) en volumen central |
 | [06 - Operaciones](docs/06-operaciones-cheatsheet.md) | Cheatsheet de comandos |
 | [07 - Configuración por servidor](docs/07-configuracion-por-servidor.md) | Override de recursos por servidor |
+| [08 - Checklist de producción](docs/08-checklist-produccion.md) | Verificaciones y limitaciones antes de salir a producción |
+| [Despliegue de merida](docs/despliegue-merida.md) | Caso real: Odoo 14 + reutilización de SSL wildcard de producción |

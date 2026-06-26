@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — clean-logs.sh
+# EXTENDRIX — clean-logs.sh
 # Vacía (trunca a 0 bytes) los archivos de log de Docker de un proyecto o de
 # todos los proyectos Odoo. Los logs son los del driver json-file de cada
 # contenedor (/var/lib/docker/.../<id>-json.log), que es de donde leen

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — new-project.sh
+# EXTENDRIX — new-project.sh
 # Crea la estructura de directorios y archivos base para un nuevo proyecto.
 #
 # USO:
 #   ./scripts/new-project.sh <proyecto> <version_odoo> <entorno> <puerto_base>
 #
 # EJEMPLOS:
-#   ./scripts/new-project.sh clientenuevo 19 prod 19010
-#   ./scripts/new-project.sh honordev 18 dev 18030
-#   ./scripts/new-project.sh mapesa 17 prod 17020
+#   ./scripts/new-project.sh merida 14 prod 14010
+#   ./scripts/new-project.sh merida 14 dev 14030
+#   ./scripts/new-project.sh motomarket 14 prod 14040
 # =============================================================================
 
 set -euo pipefail
@@ -30,10 +30,10 @@ VERSION="${2:-}"
 ENTORNO="${3:-}"
 PUERTO_BASE="${4:-}"
 
-[[ -z "$PROYECTO"    ]] && error "Falta: nombre del proyecto (ej: clientenuevo)"
-[[ -z "$VERSION"     ]] && error "Falta: versión de Odoo (ej: 17, 18, 19)"
+[[ -z "$PROYECTO"    ]] && error "Falta: nombre del proyecto (ej: merida)"
+[[ -z "$VERSION"     ]] && error "Falta: versión de Odoo (ej: 14)"
 [[ -z "$ENTORNO"     ]] && error "Falta: entorno (dev | sta | prod)"
-[[ -z "$PUERTO_BASE" ]] && error "Falta: puerto base del host (ej: 19010)"
+[[ -z "$PUERTO_BASE" ]] && error "Falta: puerto base del host (ej: 14010)"
 
 CONTAINER_NAME="odoo${VERSION}_${PROYECTO}_${ENTORNO}"
 PUERTO_LP=$((PUERTO_BASE + 1))
@@ -41,7 +41,7 @@ VOLUME_NAME="odoo${VERSION}_${PROYECTO}_${ENTORNO}_data"
 DB_PREFIX="${PROYECTO}_${ENTORNO}"
 
 echo ""
-echo -e "${BOLD}══ OLANOIT — Nuevo Proyecto ══${NC}"
+echo -e "${BOLD}══ EXTENDRIX — Nuevo Proyecto ══${NC}"
 echo ""
 echo -e "  Proyecto    : ${CYAN}$PROYECTO${NC}"
 echo -e "  Odoo        : ${CYAN}$VERSION${NC}"
@@ -86,7 +86,7 @@ fi
 
 cat > "$CONF_FILE" << EOF
 # =============================================================================
-# OLANOIT — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
+# EXTENDRIX — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
 # Contenedor: ${CONTAINER_NAME}
 # Generado por: new-project.sh
 # =============================================================================

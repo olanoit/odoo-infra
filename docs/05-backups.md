@@ -32,11 +32,11 @@ intermedios al host.
 Ejemplo real con un proyecto:
 
 ```
-./backups/farmaniacos/
+./backups/merida/
 ├── db/
-│   └── 20260511_020000_farmaniacos_sta_principal.sql.gz
+│   └── 20260511_020000_merida_sta_principal.sql.gz
 └── filestore/
-    └── 20260511_020000_farmaniacos_sta_principal_filestore.tar.gz
+    └── 20260511_020000_merida_sta_principal_filestore.tar.gz
 ```
 
 ---
@@ -47,14 +47,14 @@ Ejemplo real con un proyecto:
 # SINTAXIS:
 ./scripts/ops.sh backup <proyecto> <contenedor> <base_de_datos>
 
-# Ejemplo — staging principal de farmaniacos:
-./scripts/ops.sh backup farmaniacos odoo18_farmaniacos_sta farmaniacos_sta_principal
+# Ejemplo — staging principal de merida:
+./scripts/ops.sh backup merida odoo14_merida_sta merida_sta_principal
 ```
 
-Esto genera dos archivos con el **mismo timestamp** en `./backups/farmaniacos/`:
+Esto genera dos archivos con el **mismo timestamp** en `./backups/merida/`:
 
-- `db/20260511_020000_farmaniacos_sta_principal.sql.gz` (pg_dump comprimido)
-- `filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz`
+- `db/20260511_020000_merida_sta_principal.sql.gz` (pg_dump comprimido)
+- `filestore/20260511_020000_merida_sta_principal_filestore.tar.gz`
 
 Si la DB todavía no tiene adjuntos, el filestore se omite con un warning (es normal
 en bases recién creadas).
@@ -78,14 +78,14 @@ cada una en el volumen central.
 ./scripts/ops.sh list-backups
 
 # Solo un proyecto
-./scripts/ops.sh list-backups farmaniacos
+./scripts/ops.sh list-backups merida
 ```
 
 Equivalente manual:
 
 ```bash
-ls -lh ./backups/farmaniacos/db/
-ls -lh ./backups/farmaniacos/filestore/
+ls -lh ./backups/merida/db/
+ls -lh ./backups/merida/filestore/
 ```
 
 ---
@@ -110,21 +110,21 @@ ls -lh ./backups/farmaniacos/filestore/
 ```bash
 # A) Restauración típica — auto-detecta el filestore por timestamp
 ./scripts/ops.sh restore \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_copia \
-  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
+  odoo14_merida_sta \
+  merida_sta_copia \
+  merida/db/20260511_020000_merida_sta_principal.sql.gz
 
 # B) Especificando ambos archivos manualmente
 ./scripts/ops.sh restore \
-  odoo18_farmaniacos_sta \
-  farmaniacos_sta_qa \
-  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz \
-  farmaniacos/filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz
+  odoo14_merida_sta \
+  merida_sta_qa \
+  merida/db/20260511_020000_merida_sta_principal.sql.gz \
+  merida/filestore/20260511_020000_merida_sta_principal_filestore.tar.gz
 
 # C) Sobrescribir una DB existente (eliminarla primero)
-docker exec odoo_postgres dropdb -U odoo farmaniacos_sta_copia
-./scripts/ops.sh restore odoo18_farmaniacos_sta farmaniacos_sta_copia \
-  farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
+docker exec odoo_postgres dropdb -U odoo merida_sta_copia
+./scripts/ops.sh restore odoo14_merida_sta merida_sta_copia \
+  merida/db/20260511_020000_merida_sta_principal.sql.gz
 ```
 
 ### Qué hace internamente el `restore`
@@ -135,8 +135,8 @@ docker exec odoo_postgres dropdb -U odoo farmaniacos_sta_copia
    carpeta de la DB destino: `/var/lib/odoo/filestore/<db_destino>/`.
 4. Reinicia el contenedor Odoo para que detecte la nueva DB.
 
-> El renombrado del filestore es lo que permite restaurar `farmaniacos_sta_principal`
-> como `farmaniacos_sta_copia` sin que Odoo pierda los adjuntos.
+> El renombrado del filestore es lo que permite restaurar `merida_sta_principal`
+> como `merida_sta_copia` sin que Odoo pierda los adjuntos.
 
 ---
 
@@ -164,20 +164,20 @@ Para esos casos existe el comando dedicado **`restore-external`**, que:
 
 Supongamos que se copió un backup de producción al servidor de staging en
 `/opt/backups_odoo/conexion_prod250707_FULL_2026-05-12_09-20.tar.gz`,
-y se quiere cargarlo en el proyecto `reycar`:
+y se quiere cargarlo en el proyecto `merida`:
 
 ```bash
 # 1. (Opcional) Inspeccionar el contenido del archivo
 tar -tzf /opt/backups_odoo/conexion_prod250707_FULL_2026-05-12_09-20.tar.gz | head
 
-# 2. Restaurar a una DB nueva en el contenedor de reycar
+# 2. Restaurar a una DB nueva en el contenedor de merida
 ./scripts/ops.sh restore-external \
-  odoo18_reycar_sta \
-  reycar_sta_principal \
+  odoo14_merida_sta \
+  merida_sta_principal \
   /opt/backups_odoo/conexion_prod250707_FULL_2026-05-12_09-20.tar.gz
 
 # 3. Neutralizar (apaga cron, mail saliente, payment providers, etc.)
-./scripts/ops.sh neutralize odoo18_reycar_sta reycar_sta_principal
+./scripts/ops.sh neutralize odoo14_merida_sta merida_sta_principal
 ```
 
 > El nombre de DB destino **debe** respetar el dbfilter del contenedor
@@ -198,8 +198,8 @@ se cargue manualmente un filestore por separado.
 ### Si la DB destino ya existe
 
 ```bash
-docker exec odoo_postgres dropdb -U odoo --force reycar_sta_principal
-./scripts/ops.sh restore-external odoo18_reycar_sta reycar_sta_principal /ruta/al/archivo.tar.gz
+docker exec odoo_postgres dropdb -U odoo --force merida_sta_principal
+./scripts/ops.sh restore-external odoo14_merida_sta merida_sta_principal /ruta/al/archivo.tar.gz
 ```
 
 ### Neutralizar después de importar producción
@@ -268,7 +268,7 @@ Qué hace cada corrida:
 Si preferís respaldar un proyecto puntual en vez de todos:
 
 ```cron
-0 2 * * * /opt/odoo-infra/scripts/ops.sh backup farmaniacos odoo18_farmaniacos_sta farmaniacos_sta_principal >> /var/log/odoo-backups.log 2>&1
+0 2 * * * /opt/odoo-infra/scripts/ops.sh backup merida odoo14_merida_sta merida_sta_principal >> /var/log/odoo-backups.log 2>&1
 ```
 
 Para más proyectos, replicá la línea cambiando `<proyecto>`, contenedor y nombre de DB.
@@ -287,7 +287,7 @@ Solo para emergencias o cuando la terminal no esté disponible:
 > Con `list_db=False` y el bloqueo de `/web/database` en Nginx, el manager web
 > **no** es accesible desde internet en los entornos generados por los scripts.
 > Para usarlo, hacelo desde la red interna del servidor o mediante un túnel SSH
-> (`ssh -L 8069:127.0.0.1:18020 usuario@servidor`). El terminal sigue siendo la
+> (`ssh -L 8069:127.0.0.1:14020 usuario@servidor`). El terminal sigue siendo la
 > vía preferida.
 
 > El terminal es preferible: backup atómico, comprimido, controlado por cron y sin
@@ -299,7 +299,7 @@ Solo para emergencias o cuando la terminal no esté disponible:
 
 ```bash
 # Al equipo local
-scp usuario@IP_SERVIDOR:/opt/odoo-infra/backups/farmaniacos/db/*.sql.gz ~/backups/
+scp usuario@IP_SERVIDOR:/opt/odoo-infra/backups/merida/db/*.sql.gz ~/backups/
 
 # A AWS S3 (sincroniza todo el árbol de backups)
 aws s3 sync /opt/odoo-infra/backups/ \
@@ -316,12 +316,12 @@ rclone copy /opt/odoo-infra/backups/ gdrive:odoo-staging-backups/
 
 ```bash
 # DB
-gzip -t backups/farmaniacos/db/20260511_020000_farmaniacos_sta_principal.sql.gz
+gzip -t backups/merida/db/20260511_020000_merida_sta_principal.sql.gz
 echo "Exit code: $?"   # 0 = OK
 
 # Filestore
-gzip -t backups/farmaniacos/filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz
-tar tzf  backups/farmaniacos/filestore/20260511_020000_farmaniacos_sta_principal_filestore.tar.gz | head
+gzip -t backups/merida/filestore/20260511_020000_merida_sta_principal_filestore.tar.gz
+tar tzf  backups/merida/filestore/20260511_020000_merida_sta_principal_filestore.tar.gz | head
 ```
 
 ---

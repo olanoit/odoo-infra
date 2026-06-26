@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — sync-projects.sh
+# EXTENDRIX — sync-projects.sh
 #
 # Lee projects-registry.conf y aplica automáticamente los proyectos nuevos.
 # Los proyectos ya desplegados son detectados y omitidos automáticamente.
@@ -64,7 +64,7 @@ CERTBOT_EMAIL=$(
     | cut -d= -f2 || true
 )
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
-[[ -z "$CERTBOT_EMAIL" ]] && error "CERTBOT_EMAIL no configurado. Agrégalo en .env: CERTBOT_EMAIL=admin@tudominio.com"
+[[ -z "$CERTBOT_EMAIL" ]] && error "CERTBOT_EMAIL no configurado. Agrégalo en .env: CERTBOT_EMAIL=support@extendrix.com"
 
 # ─── Helper: insertar bloque antes de un marcador en un archivo ──────────────
 insert_before_marker() {
@@ -183,7 +183,7 @@ NEW_PROJECTS=0
 APPLIED_NAMES=()
 
 echo ""
-echo -e "${BOLD}══ OLANOIT — Sync Projects ══${NC}"
+echo -e "${BOLD}══ EXTENDRIX — Sync Projects ══${NC}"
 $APPLY && echo -e "  Modo: ${GREEN}APLICAR${NC}" || echo -e "  Modo: ${YELLOW}DRY-RUN${NC} (usa --apply para aplicar cambios)"
 echo ""
 
@@ -270,7 +270,7 @@ while IFS=: read -r PROYECTO VERSION ENTORNO DOMINIO PUERTO_HTTP; do
     CONF_FILE="projects/${PROYECTO}/odoo${VERSION}/${ENTORNO}/config/odoo.conf"
     cat > "$CONF_FILE" << ODOOCONF
 # =============================================================================
-# OLANOIT — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
+# EXTENDRIX — Odoo ${VERSION} | Proyecto: ${PROYECTO} | Entorno: ${ENTORNO^^}
 # Contenedor: ${CONTAINER_NAME}
 # Generado por: sync-projects.sh
 # =============================================================================
@@ -493,7 +493,7 @@ VHOSTBLOCK
     APPLIED_NAMES+=("$CONTAINER_NAME")
 
     # ── 7. Agregar bloque por defecto a docker-compose.override.yml ───────────
-    # entrypoint + addons-path con shared-addons/OLANOIT_extra_addons/tools.
+    # entrypoint + addons-path con shared-addons/EXTENDRIX_extra_addons/tools.
     # Idempotente: si ya existe, se omite. Editá manualmente el override después
     # para agregar mercadolibre, account u otros shared-addons.
     if [[ -x ./scripts/sync-overrides.sh ]]; then

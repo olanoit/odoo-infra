@@ -1,6 +1,6 @@
 #!/bin/sh
 # =============================================================================
-# OLANOIT — odoo-entrypoint.sh
+# EXTENDRIX — odoo-entrypoint.sh
 # Wrapper del entrypoint de Odoo: instala requirements.txt de los módulos
 # en shared-addons antes de pasar el control al entrypoint oficial.
 # =============================================================================

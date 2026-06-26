@@ -1,7 +1,7 @@
 # 02 — Agregar un Nuevo Proyecto de Staging
 
 > **Objetivo:** Agregar una nueva instancia Odoo de **staging** (`_sta`).
-> **Ejemplo práctico:** Agregar `odoo19_micliente_sta` con dominio `micliente-sta.tudominio.com`.
+> **Ejemplo práctico:** Agregar `odoo14_merida_sta` con dominio `merida-sta.odoo-rideco.mx`.
 >
 > Este orquestador solo despliega entornos staging. Si necesitás dev o prod, usá
 > otro repo o servidor — acá todo se llama `_sta`.
@@ -31,11 +31,11 @@ las dos variables globales:
 ```dotenv
 # Globales (ya existen del setup inicial — verificar que estén)
 POSTGRES_PASSWORD=TuContraseñaSegura     # usada por todos los contenedores Odoo
-CERTBOT_EMAIL=admin@tudominio.com        # usada por --ssl para emitir/renovar certs
+CERTBOT_EMAIL=support@extendrix.com      # usada por --ssl para emitir/renovar certs
 
 # Una variable DOMAIN_ por cada instancia
 # Formato: DOMAIN_<PROYECTO>_<ENTORNO>=<subdominio>
-DOMAIN_MICLIENTE_STA=micliente-sta.tudominio.com
+DOMAIN_MERIDA_STA=merida-sta.odoo-rideco.mx
 ```
 
 **¿Para qué se usa cada cosa?**
@@ -60,11 +60,11 @@ Agregar una línea con el formato `PROYECTO:VERSION:ENTORNO:DOMINIO:PUERTO_HTTP`
 (el dominio debe coincidir exactamente con el valor de `DOMAIN_*` del paso 1):
 
 ```
-micliente:19:sta:micliente-sta.tudominio.com:19020
+merida:14:sta:merida-sta.odoo-rideco.mx:14020
 ```
 
 > El puerto HTTP debe estar libre y respetar la convención de rangos
-> (Odoo 19: `19010–19099`, incrementos de 10). Ver tabla más abajo.
+> (Odoo 14: `14010–14099`, incrementos de 10). Ver tabla más abajo.
 
 ### Paso 3 — Dry-run (ver qué haría el script)
 
@@ -117,10 +117,10 @@ Los proyectos ya desplegados son detectados y omitidos automáticamente.
 
 ```bash
 # shared-addons está separado por versión de Odoo: shared-addons/<VERSION>/
-# Si el proyecto es Odoo 19 y el módulo ya está en shared-addons/19/, ya está disponible.
+# Si el proyecto es Odoo 14 y el módulo ya está en shared-addons/14/, ya está disponible.
 # Para agregar un nuevo módulo compartido a una versión específica:
-cd shared-addons/19/    # o 18/, 17/ — según la versión del proyecto
-git clone -b 19.0 https://github.com/OLANOIT/al_l10n_pe_edi.git
+cd shared-addons/14/    # según la versión del proyecto
+git clone -b 14.0 https://github.com/Extendrix/al_l10n_pe_edi.git
 ```
 
 ### Paso 6 — Validar el despliegue
@@ -144,17 +144,17 @@ git clone -b 19.0 https://github.com/OLANOIT/al_l10n_pe_edi.git
 | Versión Odoo | Puerto HTTP host | Puerto LP host   | Convención HTTP         |
 |--------------|-----------------|------------------|-------------------------|
 | Odoo 14      | 14010–14099     | HTTP + 1         | 14010, 14020, 14030...  |
-| Odoo 17      | 17010–17099     | HTTP + 1         | 17010, 17020, 17030...  |
-| Odoo 18      | 18010–18099     | HTTP + 1         | 18010, 18020, 18030...  |
-| Odoo 19      | 19010–19099     | HTTP + 1         | 19010, 19020, 19030...  |
 
-> El puerto de longpolling es siempre **puerto HTTP + 1** (ej: HTTP=19030 → LP=19031).
+> Las otras versiones compatibles siguen la convención `{ver}010–{ver}099`
+> (incrementos de 10).
+> El puerto de longpolling es siempre **puerto HTTP + 1** (ej: HTTP=14030 → LP=14031).
 
 | Contenedor                  | HTTP host | Longpolling host |
 |-----------------------------|-----------|------------------|
-| odoo19_micliente_sta        | 19020     | 19021            |
-| odoo19_otroproyecto_sta     | 19030     | 19031            |
-| odoo19_tercercliente_sta    | 19040     | 19041            |
+| odoo14_merida_prod          | 14010     | 14011            |
+| odoo14_merida_sta           | 14020     | 14021            |
+| odoo14_merida_dev           | 14030     | 14031            |
+| odoo14_motomarket_prod      | 14040     | 14041            |
 
 ---
 
@@ -167,14 +167,14 @@ Para casos donde se necesita control total sobre cada archivo.
 > después y `ops.sh health` no listará el dominio.
 >
 > ```dotenv
-> DOMAIN_MICLIENTE_STA=micliente-sta.tudominio.com
+> DOMAIN_MERIDA_STA=merida-sta.odoo-rideco.mx
 > ```
 
 ### PARTE A — Estructura de directorios
 
 ```bash
-PROYECTO="micliente"
-VERSION="odoo19"
+PROYECTO="merida"
+VERSION="odoo14"
 ENTORNO="sta"
 
 mkdir -p projects/${PROYECTO}/${VERSION}/${ENTORNO}/config
@@ -188,7 +188,7 @@ mkdir -p backups/${PROYECTO}/filestore
 ### PARTE B — Archivo `odoo.conf`
 
 ```bash
-./scripts/new-project.sh micliente 19 sta 19030
+./scripts/new-project.sh merida 14 sta 14020
 ```
 
 El archivo generado ya incluye los paths correctos. Verifica los valores críticos:
@@ -211,9 +211,9 @@ list_db = False
 ### PARTE C — Servicio en `docker-compose.yml`
 
 ```yaml
-  odoo19_micliente_sta:
-    image: odoo:19.0
-    container_name: odoo19_micliente_sta
+  odoo14_merida_sta:
+    image: odoo:14.0
+    container_name: odoo14_merida_sta
     restart: unless-stopped
     depends_on:
       db:
@@ -224,15 +224,15 @@ list_db = False
       USER: ${POSTGRES_USER:-odoo}
       PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - odoo19_micliente_sta_data:/var/lib/odoo
-      - ./projects/micliente/odoo19/sta/config/odoo.conf:/etc/odoo/odoo.conf:ro
-      - ./projects/micliente/odoo19/sta/addons:/mnt/extra-addons
-      - ./shared-addons/19:/mnt/shared-addons:ro
-      - ./enterprise/odoo19:/mnt/enterprise:ro
+      - odoo14_merida_sta_data:/var/lib/odoo
+      - ./projects/merida/odoo14/sta/config/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./projects/merida/odoo14/sta/addons:/mnt/extra-addons
+      - ./shared-addons/14:/mnt/shared-addons:ro
+      - ./enterprise/odoo14:/mnt/enterprise:ro
       - ./backups:/backups
     ports:
-      - "127.0.0.1:19020:8069"
-      - "127.0.0.1:19021:8072"
+      - "127.0.0.1:14020:8069"
+      - "127.0.0.1:14021:8072"
     networks:
       - odoo_net
     command: ["odoo", "--config=/etc/odoo/odoo.conf", "--admin-passwd=${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}"]
@@ -252,8 +252,8 @@ list_db = False
 Agregar el volumen en la sección `volumes:`:
 
 ```yaml
-  odoo19_micliente_sta_data:
-    name: odoo19_micliente_sta_data
+  odoo14_merida_sta_data:
+    name: odoo14_merida_sta_data
 ```
 
 ### PARTE D — Upstream en Nginx
@@ -261,13 +261,13 @@ Agregar el volumen en la sección `volumes:`:
 Abrir `nginx/conf.d/00-upstreams.conf` y agregar antes del marcador `__SYNC_UPSTREAMS_INSERT__`:
 
 ```nginx
-# --- ODOO 19 | MICLIENTE | STAGING ---
-upstream up_micliente_sta_http {
-    server odoo19_micliente_sta:8069 weight=1 max_fails=3 fail_timeout=30s;
+# --- ODOO 14 | MERIDA | STAGING ---
+upstream up_merida_sta_http {
+    server odoo14_merida_sta:8069 weight=1 max_fails=3 fail_timeout=30s;
     keepalive 16;
 }
-upstream up_micliente_sta_lp {
-    server odoo19_micliente_sta:8072 weight=1 max_fails=3 fail_timeout=30s;
+upstream up_merida_sta_lp {
+    server odoo14_merida_sta:8072 weight=1 max_fails=3 fail_timeout=30s;
     keepalive 8;
 }
 ```
@@ -279,21 +279,21 @@ Abrir `nginx/conf.d/vhosts-projects.conf` y agregar antes del marcador `__SYNC_V
 ```nginx
 server {
     listen 80;
-    server_name micliente-sta.tudominio.com;
+    server_name merida-sta.odoo-rideco.mx;
     location /.well-known/acme-challenge/ { root /var/www/certbot; }
     location / { return 301 https://$host$request_uri; }
 }
 server {
     listen 443 ssl; http2 on;
-    server_name micliente-sta.tudominio.com;
+    server_name merida-sta.odoo-rideco.mx;
 
-    ssl_certificate     /etc/letsencrypt/live/micliente-sta.tudominio.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/micliente-sta.tudominio.com/privkey.pem;
-    ssl_trusted_certificate /etc/letsencrypt/live/micliente-sta.tudominio.com/chain.pem;
+    ssl_certificate     /etc/letsencrypt/live/merida-sta.odoo-rideco.mx/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/merida-sta.odoo-rideco.mx/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/merida-sta.odoo-rideco.mx/chain.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL_micliente_sta:10m;
+    ssl_session_cache shared:SSL_merida_sta:10m;
     ssl_session_timeout 1d; ssl_session_tickets off;
     add_header Strict-Transport-Security "max-age=63072000" always;
     # ssl_stapling deshabilitado: Let's Encrypt ya no embebe OCSP responder URL.
@@ -302,11 +302,11 @@ server {
 
     location ~* /web/login {
         limit_req zone=odoo_login burst=3 nodelay;
-        proxy_pass http://up_micliente_sta_http;
+        proxy_pass http://up_merida_sta_http;
         include /etc/nginx/conf.d/odoo-proxy-params.conf;
     }
     location /websocket {
-        proxy_pass http://up_micliente_sta_lp;
+        proxy_pass http://up_merida_sta_lp;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
@@ -317,7 +317,7 @@ server {
         proxy_read_timeout 28800s; proxy_send_timeout 28800s;
     }
     location /longpolling {
-        proxy_pass http://up_micliente_sta_lp;
+        proxy_pass http://up_merida_sta_lp;
         proxy_http_version 1.1;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
@@ -330,12 +330,12 @@ server {
         proxy_send_timeout 28800s;
     }
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
-        proxy_pass http://up_micliente_sta_http;
+        proxy_pass http://up_merida_sta_http;
         include /etc/nginx/conf.d/odoo-proxy-params.conf;
         expires 30d; add_header Cache-Control "public, immutable"; access_log off;
     }
     location / {
-        proxy_pass http://up_micliente_sta_http;
+        proxy_pass http://up_merida_sta_http;
         include /etc/nginx/conf.d/odoo-proxy-params.conf;
     }
 }
@@ -352,7 +352,7 @@ server {
 docker compose run --rm --entrypoint certbot certbot certonly \
   --webroot --webroot-path=/var/www/certbot \
   --email $(grep CERTBOT_EMAIL .env | cut -d= -f2) --agree-tos --no-eff-email \
-  -d micliente-sta.tudominio.com
+  -d merida-sta.odoo-rideco.mx
 docker compose exec nginx nginx -s reload
 ```
 
@@ -360,7 +360,7 @@ docker compose exec nginx nginx -s reload
 
 ```bash
 # Levantar Odoo primero, luego recargar nginx
-docker compose up -d odoo19_micliente_sta
+docker compose up -d odoo14_merida_sta
 docker compose restart nginx
 
 # Verificar estado
@@ -371,7 +371,7 @@ docker compose restart nginx
 ### Verificación final
 
 ```bash
-curl -I https://micliente-sta.tudominio.com
+curl -I https://merida-sta.odoo-rideco.mx
 # Debe responder: HTTP/2 200 o 301 redirect a /web
 ```
 
@@ -379,7 +379,7 @@ curl -I https://micliente-sta.tudominio.com
 
 ## SSL con certificado wildcard (reutilizar el de producción)
 
-Si ya tenés un certificado **wildcard** (`*.altalatam.com`), no hace falta emitir
+Si ya tenés un certificado **wildcard** (`*.odoo-rideco.mx`), no hace falta emitir
 un cert nuevo por cada subdominio: el wildcard ya lo cubre. El script
 `wildcard-ssl.sh` puebla `live/<subdominio>/` reutilizando ese cert, y el vhost
 (que apunta a `live/<subdominio>/`) lo toma sin cambios.
@@ -393,16 +393,16 @@ Hay dos modos:
 
 ```bash
 # Symlink al wildcard local (autodetecta el lineage que cubre el subdominio):
-./scripts/wildcard-ssl.sh micliente.altalatam.com
+./scripts/wildcard-ssl.sh merida.odoo-rideco.mx
 
 # Indicando explícitamente el lineage wildcard del volumen:
-./scripts/wildcard-ssl.sh micliente.altalatam.com --wildcard altalatam.com
+./scripts/wildcard-ssl.sh merida.odoo-rideco.mx --wildcard odoo-rideco.mx
 
 # Copia desde un directorio externo con fullchain.pem/privkey.pem/chain.pem:
-./scripts/wildcard-ssl.sh micliente.altalatam.com --from /ruta/al/wildcard
+./scripts/wildcard-ssl.sh merida.odoo-rideco.mx --from /ruta/al/wildcard
 
 # Copia indicando archivos sueltos:
-./scripts/wildcard-ssl.sh micliente.altalatam.com \
+./scripts/wildcard-ssl.sh merida.odoo-rideco.mx \
     --fullchain /ruta/fullchain.pem --privkey /ruta/privkey.pem
 ```
 
@@ -494,13 +494,13 @@ Si ves el warning en un vhost antiguo, comentá la línea:
 
 ```bash
 # 1. Previsualizar (no toca nada)
-./scripts/delete-project.sh micliente sta --dry-run
+./scripts/delete-project.sh merida sta --dry-run
 
-# 2. Ejecutar (pide confirmación: hay que escribir "BORRAR micliente_sta")
-./scripts/delete-project.sh micliente sta
+# 2. Ejecutar (pide confirmación: hay que escribir "BORRAR merida_sta")
+./scripts/delete-project.sh merida sta
 
 # Conservar DBs y/o backups si querés poder restaurar después
-./scripts/delete-project.sh micliente sta --keep-db --keep-backups
+./scripts/delete-project.sh merida sta --keep-db --keep-backups
 ```
 
 **Qué hace internamente, en orden:**

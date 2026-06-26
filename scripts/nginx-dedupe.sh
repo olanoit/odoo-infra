@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# OLANOIT — nginx-dedupe.sh
+# EXTENDRIX — nginx-dedupe.sh
 #
 # Limpia bloques duplicados en nginx/conf.d/*.conf que pueden quedar tras
 # correr sync-projects.sh varias veces (por ejemplo, después de un reset
