@@ -137,6 +137,9 @@ generate_block() {
     local container="$1"
     local project="$2"
     local entorno="$3"
+    # Versión de Odoo extraída del nombre del contenedor (odoo<VER>_<proj>_<ent>).
+    local version
+    version=$(echo "$container" | sed -E 's/^odoo([0-9]+)_.*/\1/')
     local svc_indent
     svc_indent=$(detect_indent)
     # Indentación de claves internas (2 espacios extra) y de items de lista (4 extra)
@@ -146,8 +149,18 @@ generate_block() {
 
 ${svc_indent}${container}:
 ${key_indent}entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
+${key_indent}# Replicamos TODOS los montajes del bloque base. Según la versión de Docker
+${key_indent}# Compose, la lista volumes: del override puede REEMPLAZAR (en vez de
+${key_indent}# mergear) la del base; declarándolos completos el contenedor nunca pierde
+${key_indent}# data, odoo.conf, addons, shared-addons, enterprise ni /backups.
 ${key_indent}volumes:
+${item_indent}- ${container}_data:/var/lib/odoo
 ${item_indent}- ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
+${item_indent}- ./projects/${project}/odoo${version}/${entorno}/config/odoo.conf:/etc/odoo/odoo.conf:ro
+${item_indent}- ./projects/${project}/odoo${version}/${entorno}/addons:/mnt/extra-addons
+${item_indent}- ./shared-addons/${version}:/mnt/shared-addons:ro
+${item_indent}- ./enterprise/odoo${version}:/mnt/enterprise:ro
+${item_indent}- ./backups:/backups
 ${key_indent}command:
 ${item_indent}- odoo
 ${item_indent}- --config=/etc/odoo/odoo.conf
