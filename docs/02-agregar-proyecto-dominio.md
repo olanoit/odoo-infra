@@ -243,7 +243,7 @@ list_db = False
     mem_limit: 3g
     cpus: 2.0
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8069/web/health || exit 1"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8069/ | grep -qE '^[23]'"]
       interval: 30s
       timeout: 10s
       retries: 5
