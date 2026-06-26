@@ -50,16 +50,34 @@ _sanitize_addons_path() {
 # Instalar dependencias Python de cualquier módulo que tenga requirements.txt,
 # en shared-addons, en los addons del proyecto (extra-addons) y en enterprise
 # (máx 2 niveles de profundidad: <dir>/<modulo>/requirements.txt).
+#
+# Detección robusta del comando pip (la imagen odoo:14.0 / Debian Buster trae
+# 'pip3', no 'pip'; las imágenes 17/18/19 traen 'pip'). Y de los flags:
+#   --break-system-packages → solo si el pip lo soporta (PEP 668, Odoo 16+).
+#   --user                  → si el contenedor no corre como root (instala en
+#                             el HOME del usuario odoo, que es el volumen data_dir).
+if command -v pip3 >/dev/null 2>&1; then PIP="pip3"
+elif command -v pip >/dev/null 2>&1; then PIP="pip"
+else PIP="python3 -m pip"; fi
+PIP_FLAGS="--quiet --no-warn-script-location --no-cache-dir"
+[ "$(id -u)" != "0" ] && PIP_FLAGS="$PIP_FLAGS --user"
+if $PIP install --help 2>/dev/null | grep -q -- '--break-system-packages'; then
+    PIP_FLAGS="$PIP_FLAGS --break-system-packages"
+fi
+
 for ADDONS_BASE in /mnt/shared-addons /mnt/extra-addons /mnt/enterprise; do
     [ -d "$ADDONS_BASE" ] || continue
     find "$ADDONS_BASE" -maxdepth 2 -name requirements.txt 2>/dev/null | while read req; do
-        echo "[startup] Instalando dependencias: $req"
+        echo "[startup] Instalando dependencias ($PIP): $req"
         tmp_dir=$(mktemp -d)
         cp -r "$(dirname "$req")/." "$tmp_dir/"
         # Quitar el flag -e (editable): pip instalaría apuntando al tmp_dir que luego
         # se borra, dejando el import roto. Sin -e, pip copia los archivos a site-packages.
         sed 's/^-e //' "$tmp_dir/requirements.txt" > "$tmp_dir/requirements_fixed.txt"
-        (cd "$tmp_dir" && pip install --quiet --no-warn-script-location --no-cache-dir --break-system-packages -r requirements_fixed.txt)
+        # El '|| echo' evita que un fallo de pip aborte el wrapper (set -e) y deje
+        # el contenedor en restart loop: Odoo arranca igual y queda el aviso.
+        (cd "$tmp_dir" && $PIP install $PIP_FLAGS -r requirements_fixed.txt) \
+            || echo "[startup] AVISO: no se pudieron instalar dependencias de $req"
         rm -rf "$tmp_dir"
     done
 done
