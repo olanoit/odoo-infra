@@ -1,0 +1,18 @@
+# =============================================================================
+# Contexto de build de las imágenes Odoo (build/Dockerfile).
+# El build solo necesita scripts/odoo-entrypoint.sh; excluimos todo lo pesado
+# o irrelevante para acelerar el build y evitar enviar secretos/datos.
+# =============================================================================
+.git
+.gitignore
+.env
+.env.example
+backups/
+nginx/certbot/
+projects/
+shared-addons/
+enterprise/
+docs/
+*.md
+docker-compose.yml
+docker-compose.override.yml
