@@ -148,14 +148,14 @@ generate_block() {
     cat <<YAMLBLOCK
 
 ${svc_indent}${container}:
-${key_indent}entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
+${key_indent}# El entrypoint está horneado en la imagen (build/Dockerfile); no se
+${key_indent}# re-inyecta acá ni se bind-montea el wrapper.
 ${key_indent}# Replicamos TODOS los montajes del bloque base. Según la versión de Docker
 ${key_indent}# Compose, la lista volumes: del override puede REEMPLAZAR (en vez de
 ${key_indent}# mergear) la del base; declarándolos completos el contenedor nunca pierde
 ${key_indent}# data, odoo.conf, addons, shared-addons, enterprise ni /backups.
 ${key_indent}volumes:
 ${item_indent}- ${container}_data:/var/lib/odoo
-${item_indent}- ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
 ${item_indent}- ./projects/${project}/odoo${version}/${entorno}/config/odoo.conf:/etc/odoo/odoo.conf:ro
 ${item_indent}- ./projects/${project}/odoo${version}/${entorno}/addons:/mnt/extra-addons
 ${item_indent}- ./shared-addons/${version}:/mnt/shared-addons:ro

@@ -62,8 +62,8 @@ DOMAIN_MERIDA_STA=merida-sta.odoo-rideco.mx
 
 > **`ODOO_MASTER_PASSWD` es obligatoria.** Es la *master password* de Odoo
 > (gestor de bases de datos: crear/borrar/backup/restaurar). La inyecta el
-> wrapper `odoo-entrypoint.sh` en un config de runtime (Odoo 14 no acepta
-> `--admin-passwd` por CLI) y **nunca** se escribe en los `odoo.conf`
+> wrapper `odoo-entrypoint.sh` en un config de runtime (en versiones como Odoo 14
+> que no aceptan `--admin-passwd` por CLI) y **nunca** se escribe en los `odoo.conf`
 > versionados. Si no está definida, los contenedores Odoo **no arrancan**.
 > Genera valores fuertes y **distintos** para cada variable:
 >

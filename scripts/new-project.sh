@@ -16,6 +16,10 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
+# Resolver único de perfiles por versión (imagen base, tag, Dockerfile, quirks).
+# shellcheck source=scripts/lib/version-profile.sh
+source "$PROJECT_DIR/scripts/lib/version-profile.sh"
+
 # Cargar .env para resolver POSTGRES_USER en el template del odoo.conf
 [[ -f .env ]] && set -a && source .env && set +a
 
@@ -34,6 +38,10 @@ PUERTO_BASE="${4:-}"
 [[ -z "$VERSION"     ]] && error "Falta: versión de Odoo (ej: 14)"
 [[ -z "$ENTORNO"     ]] && error "Falta: entorno (dev | sta | prod)"
 [[ -z "$PUERTO_BASE" ]] && error "Falta: puerto base del host (ej: 14010)"
+
+# Resolver el perfil de la versión: imagen base, tag de build, Dockerfile, etc.
+load_version_profile "$VERSION" \
+    || error "Versión de Odoo inválida: '${VERSION}' (se espera un entero, ej: 14, 18)"
 
 CONTAINER_NAME="odoo${VERSION}_${PROYECTO}_${ENTORNO}"
 PUERTO_LP=$((PUERTO_BASE + 1))
@@ -74,13 +82,13 @@ else
     MEM_LIMIT="2g"; CPUS="1.0"
 fi
 
-# Opciones dependientes de la versión: Odoo 16+ usa gevent_port y websocket_*;
-# Odoo ≤15 usa longpolling_port y no tiene websockets.
-if (( VERSION >= 16 )); then
-    LP_PORT_LINE="gevent_port    = 8072"
+# Opciones dependientes de la versión, resueltas por el perfil
+# (config/versions/<V>.conf): PORT_STYLE → gevent_port vs longpolling_port;
+# HAS_WEBSOCKETS → opciones websocket_*.
+LP_PORT_LINE="$VP_LP_PORT_LINE"
+if [[ "$HAS_WEBSOCKETS" == "true" ]]; then
     WS_BLOCK=$'\nwebsocket_keep_alive_timeout = 3600\nwebsocket_rate_limit_burst   = 10\nwebsocket_rate_limit_delay   = 0.2'
 else
-    LP_PORT_LINE="longpolling_port = 8072"
     WS_BLOCK=""
 fi
 
@@ -144,7 +152,13 @@ cat << EOF
   # Contenedor: ${CONTAINER_NAME}
   # ═══════════════════════════════════════════════════════
   ${CONTAINER_NAME}:
-    image: odoo:${VERSION}.0
+    build:
+      context: .
+      dockerfile: ${DOCKERFILE}
+      args:
+        ODOO_BASE_IMAGE: ${ODOO_BASE_IMAGE}
+        ODOO_VERSION: "${VERSION}"
+    image: ${ODOO_IMAGE_TAG}
     container_name: ${CONTAINER_NAME}
     restart: unless-stopped
     depends_on:
@@ -156,12 +170,14 @@ cat << EOF
       USER: \${POSTGRES_USER:-odoo}
       PASSWORD: \${POSTGRES_PASSWORD}
       ODOO_MASTER_PASSWD: \${ODOO_MASTER_PASSWD:?falta_ODOO_MASTER_PASSWD_en_.env}
-    # El wrapper inyecta admin_passwd (Odoo 14 no soporta --admin-passwd por CLI)
-    # e instala los requirements.txt de los módulos (shared/extra/enterprise) al arrancar.
-    entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
+      # Flags del perfil de la versión (los lee el entrypoint horneado).
+      ODOO_SUPPORTS_ADMIN_PASSWD_CLI: "${SUPPORTS_ADMIN_PASSWD_CLI}"
+      ODOO_NEEDS_ADDONS_SANITIZE: "${NEEDS_ADDONS_SANITIZE}"
+    # Entrypoint horneado en la imagen (build/Dockerfile): el wrapper inyecta
+    # admin_passwd e instala los requirements.txt de los módulos (shared/extra/
+    # enterprise) al arrancar, según el perfil de la versión.
     volumes:
       - ${VOLUME_NAME}:/var/lib/odoo
-      - ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
       - ./projects/${PROYECTO}/odoo${VERSION}/${ENTORNO}/config/odoo.conf:/etc/odoo/odoo.conf:ro
       - ./projects/${PROYECTO}/odoo${VERSION}/${ENTORNO}/addons:/mnt/extra-addons
       - ./shared-addons/${VERSION}:/mnt/shared-addons:ro

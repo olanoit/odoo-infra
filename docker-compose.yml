@@ -1,30 +1,31 @@
 # =============================================================================
-# EXTENDRIX — Orquestación Odoo 14
+# EXTENDRIX — Orquestación Odoo multi-versión
 #
 # Infraestructura base: PostgreSQL + Nginx + Certbot
-# Los servicios Odoo se agregan via sync-projects.sh o new-project.sh
-# Orientado a Odoo 14; la mecánica es version-aware y soporta otras versiones
-# compatibles (la convención usa {VERSION}).
+# Los servicios Odoo se agregan via sync-projects.sh o new-project.sh.
+# Soporta cualquier versión de Odoo: la imagen se construye desde build/Dockerfile
+# y el perfil de cada versión vive en config/versions/{VERSION}.conf.
 #
 # Convención de nombres de contenedores:
 #   odoo{VERSION}_{PROYECTO}_{ENTORNO}
-#   Ejemplos: odoo14_merida_prod | odoo14_motomarket_sta
+#   Ejemplos: odoo14_merida_prod | odoo18_motomarket_sta
 #
 # PUERTOS INTERNOS (solo accesibles vía Nginx, bindeados a 127.0.0.1):
-#   Odoo 14: 14010–14099  (otras versiones compatibles: {ver}010–{ver}099)
+#   Rango por versión: {ver}010–{ver}099  (ej: Odoo 14 → 14010–14099, Odoo 18 → 18010–18099)
 #   Puerto longpolling = puerto_http + 1  (ej: 14010 → 14011)
 # =============================================================================
 
 services:
 
   # ---------------------------------------------------------------------------
-  # BASE DE DATOS — PostgreSQL 13 compartida (rama Odoo 14)
-  # Odoo 14 soporta oficialmente PostgreSQL ≤ 13; PG13 también es válido
-  # para Odoo 17-19, por eso se usa como base común en esta rama.
+  # BASE DE DATOS — PostgreSQL compartido (multi-versión)
+  # Un único Postgres para todo el servidor. La imagen y el tuning son
+  # configurables vía .env (Compose solo interpola desde .env / el entorno).
+  # PG 13 (default) es válido para Odoo 14–19; subí a 15/16 si lo necesitás.
   # Prefijo de DB por proyecto: {proyecto}_{entorno}_*
   # ---------------------------------------------------------------------------
   db:
-    image: postgres:13-alpine
+    image: ${POSTGRES_IMAGE:-postgres:13-alpine}
     container_name: odoo_postgres
     restart: unless-stopped
     environment:
@@ -33,15 +34,15 @@ services:
       POSTGRES_DB:       postgres
     command: >
       postgres
-        -c max_connections=200
-        -c shared_buffers=512MB
-        -c effective_cache_size=1536MB
-        -c maintenance_work_mem=128MB
+        -c max_connections=${PG_MAX_CONNECTIONS:-200}
+        -c shared_buffers=${PG_SHARED_BUFFERS:-512MB}
+        -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-1536MB}
+        -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-128MB}
         -c checkpoint_completion_target=0.9
         -c wal_buffers=16MB
-        -c work_mem=4MB
-        -c min_wal_size=1GB
-        -c max_wal_size=4GB
+        -c work_mem=${PG_WORK_MEM:-4MB}
+        -c min_wal_size=${PG_MIN_WAL_SIZE:-1GB}
+        -c max_wal_size=${PG_MAX_WAL_SIZE:-4GB}
         -c log_min_duration_statement=2000
         -c log_line_prefix='%t [%p] user=%u db=%d app=%a '
     volumes:
@@ -111,7 +112,13 @@ services:
   # Ver docs/02-agregar-proyecto-dominio.md o usar sync-projects.sh
   # ---------------------------------------------------------------------------
   # odoo{VERSION}_{PROYECTO}_{ENTORNO}:
-  #   image: odoo:{VERSION}.0
+  #   build:                                  # build obligatorio (ver build/Dockerfile)
+  #     context: .
+  #     dockerfile: build/Dockerfile
+  #     args:
+  #       ODOO_BASE_IMAGE: odoo:{VERSION}.0   # o imagen privada/digest (config/versions/{VERSION}.conf)
+  #       ODOO_VERSION: "{VERSION}"
+  #   image: extendrix/odoo:{VERSION}          # tag cacheable, 1 imagen por versión
   #   container_name: odoo{VERSION}_{PROYECTO}_{ENTORNO}
   #   restart: unless-stopped
   #   depends_on:
@@ -122,11 +129,10 @@ services:
   #     PORT: 5432
   #     USER: ${POSTGRES_USER:-odoo}
   #     PASSWORD: ${POSTGRES_PASSWORD}
-  #   # El wrapper inyecta admin_passwd (Odoo 14 no soporta --admin-passwd por CLI).
-  #   entrypoint: ["/bin/sh", "/odoo-entrypoint.sh"]
+  #   # Entrypoint horneado en la imagen (build/Dockerfile): inyecta admin_passwd
+  #   # e instala los requirements.txt de los módulos al arrancar.
   #   volumes:
   #     - odoo{VERSION}_{PROYECTO}_{ENTORNO}_data:/var/lib/odoo
-  #     - ./scripts/odoo-entrypoint.sh:/odoo-entrypoint.sh:ro
   #     - ./projects/{PROYECTO}/odoo{VERSION}/{ENTORNO}/config/odoo.conf:/etc/odoo/odoo.conf:ro
   #     - ./projects/{PROYECTO}/odoo{VERSION}/{ENTORNO}/addons:/mnt/extra-addons
   #     - ./shared-addons/{VERSION}:/mnt/shared-addons:ro
@@ -165,4 +171,4 @@ networks:
     name: odoo_internal_net
     ipam:
       config:
-        - subnet: 172.20.0.0/24
+        - subnet: ${DOCKER_NETWORK_SUBNET:-172.20.0.0/24}

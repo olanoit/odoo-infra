@@ -40,7 +40,7 @@ _sanitize_addons_path() {
         if [ "$_sap_keep" = 1 ]; then
             if [ -z "$_sap_out" ]; then _sap_out="$_sap_p"; else _sap_out="${_sap_out},${_sap_p}"; fi
         else
-            echo "[startup] addons-path: omito '${_sap_p}' (sin módulos; Odoo 14 lo rechazaría)" >&2
+            echo "[startup] addons-path: omito '${_sap_p}' (sin módulos; versiones antiguas lo rechazarían)" >&2
         fi
     done
     IFS="$_sap_oifs"
@@ -82,13 +82,20 @@ for ADDONS_BASE in /mnt/shared-addons /mnt/extra-addons /mnt/enterprise; do
     done
 done
 
+# ── Flags del perfil de la versión (inyectados por el servicio en docker-compose) ──
+# Defaults retro-compatibles: las instancias creadas antes de la capa de perfiles
+# no pasan estas vars → se asume el comportamiento conservador de Odoo ≤14.
+#   SUPPORTS_ADMIN_PASSWD_CLI=false → quitar --admin-passwd del CLI (Odoo 14 crashea).
+#   NEEDS_ADDONS_SANITIZE=true      → filtrar del addons-path los dirs sin módulos.
+SUPPORTS_ADMIN_PASSWD_CLI="${ODOO_SUPPORTS_ADMIN_PASSWD_CLI:-false}"
+NEEDS_ADDONS_SANITIZE="${ODOO_NEEDS_ADDONS_SANITIZE:-true}"
+
 # ── Config de runtime: admin_passwd + addons-path saneado ─────────────────────
-# Generamos SIEMPRE un config efectivo en el data_dir (escribible), porque dos
-# cosas no dependen del master password y deben aplicarse igual:
-#   1. Sanear el addons-path (Odoo 14 rechaza dirs vacíos).
+# Generamos SIEMPRE un config efectivo en el data_dir (escribible) para:
+#   1. Sanear el addons-path si NEEDS_ADDONS_SANITIZE=true.
 #   2. Repuntar --config a este conf (el montado en /etc/odoo es :ro).
 # La inyección de admin_passwd solo ocurre si ODOO_MASTER_PASSWD está definido
-# (Odoo 14 no acepta --admin-passwd por CLI, y el secreto no se versiona).
+# (el secreto no se versiona); aplica a todas las versiones.
 SRC_CONF=/etc/odoo/odoo.conf
 RT_CONF=/var/lib/odoo/.odoo-runtime.conf
 if [ -f "$SRC_CONF" ]; then
@@ -103,8 +110,8 @@ if [ -n "${ODOO_MASTER_PASSWD:-}" ]; then
     printf 'admin_passwd = %s\n' "${ODOO_MASTER_PASSWD}" >> "$RT_CONF"
 fi
 
-# Sanear el addons_path del conf (descartar dirs vacíos para Odoo 14).
-if grep -q '^[[:space:]]*addons_path' "$RT_CONF"; then
+# Sanear el addons_path del conf (descartar dirs vacíos) si el perfil lo pide.
+if [ "$NEEDS_ADDONS_SANITIZE" = "true" ] && grep -q '^[[:space:]]*addons_path' "$RT_CONF"; then
     _ap_cur=$(grep -m1 '^[[:space:]]*addons_path' "$RT_CONF" | sed 's/^[[:space:]]*addons_path[[:space:]]*=[[:space:]]*//')
     _ap_san=$(_sanitize_addons_path "$_ap_cur")
     grep -v '^[[:space:]]*addons_path' "$RT_CONF" > "${RT_CONF}.tmp" && mv "${RT_CONF}.tmp" "$RT_CONF"
@@ -112,14 +119,23 @@ if grep -q '^[[:space:]]*addons_path' "$RT_CONF"; then
 fi
 chmod 600 "$RT_CONF" 2>/dev/null || true
 
-# Reescribir argumentos SIEMPRE: quitar --admin-passwd=* (no soportado en Odoo 14),
-# repuntar --config al config de runtime y sanear --addons-path=* (dirs vacíos).
+# Reescribir argumentos: repuntar --config al config de runtime; quitar
+# --admin-passwd=* solo si la versión no lo soporta por CLI (Odoo 14 crashea);
+# sanear --addons-path=* solo si el perfil lo pide.
 for arg do
     shift
     case "$arg" in
-        --admin-passwd=*|--admin_passwd=*) continue ;;
+        --admin-passwd=*|--admin_passwd=*)
+            if [ "$SUPPORTS_ADMIN_PASSWD_CLI" = "true" ]; then set -- "$@" "$arg"; fi
+            ;;
         --config=*|-c=*) set -- "$@" "--config=$RT_CONF" ;;
-        --addons-path=*) set -- "$@" "--addons-path=$(_sanitize_addons_path "${arg#--addons-path=}")" ;;
+        --addons-path=*)
+            if [ "$NEEDS_ADDONS_SANITIZE" = "true" ]; then
+                set -- "$@" "--addons-path=$(_sanitize_addons_path "${arg#--addons-path=}")"
+            else
+                set -- "$@" "$arg"
+            fi
+            ;;
         *) set -- "$@" "$arg" ;;
     esac
 done

@@ -13,7 +13,7 @@ Esta guía complementa a [07-configuracion-por-servidor.md](07-configuracion-por
 
 | Área | Cómo |
 |------|------|
-| **Master password fuera del repo** | `admin_passwd` lo inyecta el wrapper `odoo-entrypoint.sh` en un config de runtime desde `ODOO_MASTER_PASSWD` (`.env`) — Odoo 14 no acepta `--admin-passwd` por CLI. Ningún `odoo.conf` versionado contiene secretos. Sin la variable, los contenedores **no arrancan**. |
+| **Master password fuera del repo** | `admin_passwd` lo inyecta el wrapper `odoo-entrypoint.sh` en un config de runtime desde `ODOO_MASTER_PASSWD` (`.env`) — útil en versiones como Odoo 14 que no aceptan `--admin-passwd` por CLI. Ningún `odoo.conf` versionado contiene secretos. Sin la variable, los contenedores **no arrancan**. |
 | **Gestor de DB no expuesto** | `list_db = False` en todos los `odoo.conf` + Nginx devuelve `404` en `/web/database`. |
 | **Aislamiento de red** | Los puertos Odoo se publican solo en `127.0.0.1`; el acceso externo pasa siempre por Nginx con TLS. |
 | **TLS moderno** | TLSv1.2/1.3, HSTS, ciphers ECDHE, renovación automática de certificados con Certbot. |

@@ -1017,7 +1017,7 @@ cmd_ssl_renew() {
 # =============================================================================
 cmd_help() {
     echo ""
-    echo -e "${BOLD}EXTENDRIX — ops.sh | Gestión de entorno Odoo 14${NC}"
+    echo -e "${BOLD}EXTENDRIX — ops.sh | Gestión de entorno Odoo multi-versión${NC}"
     echo ""
     echo -e "${CYAN}Comandos disponibles:${NC}"
     echo ""
